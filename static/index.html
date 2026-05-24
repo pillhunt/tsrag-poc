@@ -169,6 +169,7 @@
     <div id="filterResult" class="panel" hidden>
       <h2>Сужение логов <span id="filterBadge" class="badge"></span></h2>
       <p id="filterSummary" class="meta"></p>
+      <p id="filterFormatSummary" class="meta hint"></p>
       <div id="filterErrorsBlock" hidden><p><strong>Замечания:</strong></p><ul id="filterErrorsList"></ul></div>
       <p><strong>Файлы логов (<span id="logFileCount">0</span>):</strong></p>
       <ul id="logFilesList" style="font-size:0.85rem;max-height:120px;overflow:auto"></ul>
@@ -452,16 +453,25 @@
       const slowN = (data.slow_time_window_lines || []).length;
       const slowTrunc = data.slow_time_window_truncated ? " · расшир. обрезан" : "";
       document.getElementById("filterSummary").textContent =
-        `Режим: ${data.time_filter_mode} · жалоба: ${(data.time_window_lines||[]).length}/${data.total_matching_lines} строк` +
+        `Режим: ${data.time_filter_mode} · фильтр: ${data.time_filter_strategy || "auto"} · жалоба: ${(data.time_window_lines||[]).length}/${data.total_matching_lines} строк` +
         (slowN ? ` · расшир. окно (4–5): ${slowN}/${data.slow_time_window_total_count ?? slowN}${slowTrunc}` : "") +
         truncated;
+
+      const fmtSummary = data.detected_format_summary || [];
+      document.getElementById("filterFormatSummary").textContent = fmtSummary.length
+        ? "Форматы времени в логах: " + fmtSummary.join(", ")
+        : "";
 
       const sources = data.sources || {};
       document.getElementById("logFileCount").textContent = sources.log_file_count ?? 0;
 
       const logFiles = sources.log_files || [];
       document.getElementById("logFilesList").innerHTML = logFiles.length
-        ? logFiles.map(f => `<li><code>${escapeHtml(f.relative_path)}</code>${f.priority ? " ★" : ""} (${f.size_bytes} B)</li>`).join("")
+        ? logFiles.map(f => {
+            const fmt = (sources.detected_timestamp_formats || {})[f.relative_path];
+            const fmtTag = fmt ? ` · ${escapeHtml(fmt)}` : "";
+            return `<li><code>${escapeHtml(f.relative_path)}</code>${f.priority ? " ★" : ""}${fmtTag} (${f.size_bytes} B)</li>`;
+          }).join("")
         : "<li>—</li>";
 
       const byFile = data.by_file || [];
@@ -715,6 +725,10 @@
           caseone_path: paths.caseone_path,
           log_search_patterns: t?.log_search_patterns || [],
           slow_log_search_patterns: t?.slow_log_search_patterns || [],
+          incident_date: t?.incident_date?.value || null,
+          time_window_start: t?.time_window_start?.value || null,
+          time_window_end: t?.time_window_end?.value || null,
+          time_filter_strategy: "auto",
           time_filter_mode: t?.time_filter_mode || "time_window",
         }),
       });

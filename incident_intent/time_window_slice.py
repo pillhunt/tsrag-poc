@@ -5,7 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from incident_intent.log_filter_models import SourcesCheck, TimeWindowLine
-from incident_intent.log_scan import iter_lines_in_time_window, line_matches_time
+from incident_intent.log_scan import (
+    TimeSliceFilter,
+    iter_all_log_lines,
+    iter_lines_in_time_window,
+    line_in_time_window,
+)
 
 
 @dataclass
@@ -13,24 +18,20 @@ class TimeWindowSlice:
     lines: list[TimeWindowLine] = field(default_factory=list)
     truncated: bool = False
     total_count: int = 0
+    unparsed_skipped: int = 0
 
 
 def build_time_window_slice(
     sources: SourcesCheck,
-    time_patterns: tuple[str, ...],
+    flt: TimeSliceFilter,
     *,
     max_lines: int | None = None,
     full_corpus: bool = False,
 ) -> TimeWindowSlice:
-    """
-    Собрать строки логов: по времени или весь корпус (full_corpus).
-    """
     if full_corpus:
-        from incident_intent.log_scan import iter_all_log_lines
-
         line_iter = iter_all_log_lines(sources)
     else:
-        line_iter = iter_lines_in_time_window(sources, time_patterns)
+        line_iter = iter_lines_in_time_window(sources, flt)
 
     lines: list[TimeWindowLine] = []
     total = 0
@@ -54,22 +55,36 @@ def build_time_window_slice(
 
 def build_dual_time_window_slices(
     sources: SourcesCheck,
-    main_patterns: tuple[str, ...],
-    slow_patterns: tuple[str, ...],
+    main_flt: TimeSliceFilter,
+    slow_flt: TimeSliceFilter,
     *,
     max_lines: int | None = None,
     full_corpus: bool = False,
 ) -> tuple[TimeWindowSlice, TimeWindowSlice]:
-    """Один проход по логам: срез жалобы и расширенный срез для долгих HTTP."""
     if full_corpus:
-        single = build_time_window_slice(sources, (), max_lines=max_lines, full_corpus=True)
+        single = build_time_window_slice(sources, main_flt, max_lines=max_lines, full_corpus=True)
         return single, single
 
-    if not slow_patterns or slow_patterns == main_patterns:
-        single = build_time_window_slice(sources, main_patterns, max_lines=max_lines)
+    same_filter = (
+        main_flt.patterns == slow_flt.patterns
+        and main_flt.window_start == slow_flt.window_start
+        and main_flt.window_end == slow_flt.window_end
+        and main_flt.strategy == slow_flt.strategy
+    )
+    if same_filter:
+        single = build_time_window_slice(sources, main_flt, max_lines=max_lines)
         return single, single
 
-    union = tuple(dict.fromkeys(main_patterns + slow_patterns))
+    union_patterns = tuple(dict.fromkeys(main_flt.patterns + slow_flt.patterns))
+    starts = [t for t in (main_flt.window_start, slow_flt.window_start) if t is not None]
+    ends = [t for t in (main_flt.window_end, slow_flt.window_end) if t is not None]
+    union_flt = TimeSliceFilter(
+        patterns=union_patterns,
+        window_start=min(starts) if starts else None,
+        window_end=max(ends) if ends else None,
+        strategy=main_flt.strategy,
+    )
+
     main_lines: list[TimeWindowLine] = []
     slow_lines: list[TimeWindowLine] = []
     main_total = 0
@@ -77,9 +92,9 @@ def build_dual_time_window_slices(
     main_trunc = False
     slow_trunc = False
 
-    for rel, line_no, text in iter_lines_in_time_window(sources, union):
-        in_main = line_matches_time(text, main_patterns)
-        in_slow = line_matches_time(text, slow_patterns)
+    for rel, line_no, text in iter_lines_in_time_window(sources, union_flt):
+        in_main = line_in_time_window(text, file_path=rel, flt=main_flt)
+        in_slow = line_in_time_window(text, file_path=rel, flt=slow_flt)
         if in_main:
             main_total += 1
             if max_lines is None or len(main_lines) < max_lines:

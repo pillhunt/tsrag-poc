@@ -18,6 +18,7 @@ from incident_intent.keyword_utils import normalize_search_keywords
 from incident_intent.log_folder import hint_from_logs_path
 from incident_intent.models import IntentField, IntentTable, IntentTableRequest, IntentTableResponse
 from incident_intent.ollama_client import OllamaError, chat_json
+from incident_intent.time_pattern_apply import apply_multi_format_patterns
 from incident_intent.time_window_utils import (
     expand_single_time_window,
     hour_patterns,
@@ -303,6 +304,7 @@ def _enrich_table_from_dialog(table: IntentTable, req: IntentTableRequest) -> No
             table.time_window_start.value,
             table.time_window_end.value,
         )
+        apply_multi_format_patterns(table)
 
     table.missing_fields = [
         f
@@ -379,6 +381,7 @@ async def build_intent_table(req: IntentTableRequest) -> IntentTableResponse:
     table = _table_from_llm(raw, req, folder_date)
     _enrich_table_from_dialog(table, req)
     _apply_slow_window_and_duration(table, raw, req)
+    apply_multi_format_patterns(table)
     status = _resolve_status(table, req)
 
     return IntentTableResponse(

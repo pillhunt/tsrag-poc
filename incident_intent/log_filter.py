@@ -23,10 +23,15 @@ from incident_intent.log_filter_models import (
     SourcesCheck,
     TimeWindowLine,
 )
+from incident_intent.log_scan import TimeSliceFilter
+from incident_intent.time_pattern_factory import enrich_log_search_patterns
+from incident_intent.time_window_bounds import datetime_window_bounds
 from incident_intent.time_window_slice import (
     build_dual_time_window_slices,
     files_in_window,
 )
+from incident_intent.time_window_utils import DEFAULT_SLOW_PADDING_H, expand_time_window_hours
+from incident_intent.timestamp_probe import probe_log_formats, union_detected_formats
 
 _MAX_LINE_LEN = 2000
 
@@ -172,6 +177,53 @@ def _stats_and_samples_from_slice(
     return by_file, samples
 
 
+def _format_summary(detected: dict[str, str]) -> list[str]:
+    if not detected:
+        return []
+    by_fmt: dict[str, int] = {}
+    for fmt in detected.values():
+        by_fmt[fmt] = by_fmt.get(fmt, 0) + 1
+    return [f"{fmt}: {count} файл(ов)" for fmt, count in sorted(by_fmt.items())]
+
+
+def _expand_patterns(
+    req: FilterLogsRequest,
+    patterns: list[str],
+    formats: tuple[str, ...],
+    *,
+    start: str | None,
+    end: str | None,
+) -> tuple[list[str], list[str], bool]:
+    if not req.incident_date or not start or not end:
+        return patterns, [], False
+    before = len(patterns)
+    merged, warnings = enrich_log_search_patterns(
+        req.incident_date,
+        start,
+        end,
+        patterns,
+        formats,
+    )
+    return merged, warnings, len(merged) > before
+
+
+def _slice_filter(
+    patterns: list[str],
+    req: FilterLogsRequest,
+    *,
+    start: str | None,
+    end: str | None,
+) -> TimeSliceFilter:
+    bounds = datetime_window_bounds(req.incident_date, start, end)
+    ws, we = bounds if bounds else (None, None)
+    return TimeSliceFilter(
+        patterns=tuple(patterns),
+        window_start=ws,
+        window_end=we,
+        strategy=req.time_filter_strategy,
+    )
+
+
 def filter_logs(req: FilterLogsRequest) -> FilterLogsResponse:
     full_corpus = req.time_filter_mode == "full_corpus"
     patterns = [p.strip() for p in req.log_search_patterns if p and p.strip()]
@@ -204,6 +256,67 @@ def filter_logs(req: FilterLogsRequest) -> FilterLogsResponse:
         max_depth=req.max_depth,
         path_notes=path_notes,
     )
+
+    detected: dict[str, str] = {}
+    if sources.log_files and sources.logs_exists:
+        detected = probe_log_formats(
+            logs_path,
+            sources.log_files,
+            logs_is_file=sources.logs_is_file,
+        )
+        sources = sources.model_copy(update={"detected_timestamp_formats": detected})
+
+    formats = union_detected_formats(detected)
+    pattern_warnings: list[str] = []
+    patterns_expanded = False
+
+    if not full_corpus:
+        tw_start = req.time_window_start
+        tw_end = req.time_window_end
+        patterns, w, exp = _expand_patterns(req, patterns, formats, start=tw_start, end=tw_end)
+        pattern_warnings.extend(w)
+        patterns_expanded = patterns_expanded or exp
+
+        if slow_patterns != patterns:
+            slow_start, slow_end, _ = expand_time_window_hours(
+                req.incident_date,
+                tw_start,
+                tw_end,
+                padding_h=DEFAULT_SLOW_PADDING_H,
+            )
+            slow_patterns, sw, exp2 = _expand_patterns(
+                req,
+                slow_patterns,
+                formats,
+                start=slow_start or tw_start,
+                end=slow_end or tw_end,
+            )
+            pattern_warnings.extend(sw)
+            patterns_expanded = patterns_expanded or exp2
+        elif patterns_expanded:
+            slow_patterns = list(patterns)
+
+    main_flt = _slice_filter(
+        patterns,
+        req,
+        start=req.time_window_start,
+        end=req.time_window_end,
+    )
+    slow_start, slow_end = req.time_window_start, req.time_window_end
+    if req.incident_date and req.time_window_start and req.time_window_end:
+        slow_start, slow_end, _ = expand_time_window_hours(
+            req.incident_date,
+            req.time_window_start,
+            req.time_window_end,
+            padding_h=DEFAULT_SLOW_PADDING_H,
+        )
+    slow_flt = _slice_filter(
+        slow_patterns if slow_patterns else patterns,
+        req,
+        start=slow_start,
+        end=slow_end,
+    )
+
     if sources.errors and not sources.log_files:
         return FilterLogsResponse(
             status="error",
@@ -216,8 +329,8 @@ def filter_logs(req: FilterLogsRequest) -> FilterLogsResponse:
 
     time_slice, slow_slice = build_dual_time_window_slices(
         sources,
-        tuple(patterns),
-        tuple(slow_patterns) if slow_patterns else tuple(patterns),
+        main_flt,
+        slow_flt,
         max_lines=req.max_time_window_lines,
         full_corpus=full_corpus,
     )
@@ -228,7 +341,7 @@ def filter_logs(req: FilterLogsRequest) -> FilterLogsResponse:
         max_total=req.max_total_sample_lines,
     )
 
-    errors = list(sources.errors)
+    errors = list(sources.errors) + pattern_warnings
     total = time_slice.total_count
     if full_corpus:
         errors.insert(
@@ -237,9 +350,12 @@ def filter_logs(req: FilterLogsRequest) -> FilterLogsResponse:
             "Вывод может быть некорректным — в срез могли попасть события других периодов.",
         )
     elif total == 0 and sources.log_file_count > 0:
+        fmt_hint = ", ".join(_format_summary(detected)) or "не определены"
         errors.append(
-            "Строк по заданным префиксам не найдено. Проверьте дату/час в паттернах "
-            "и часовой пояс логов."
+            f"Строк по паттернам времени не найдено (режим {req.time_filter_strategy}). "
+            f"Проверьте дату/окно ({req.incident_date} {req.time_window_start}–{req.time_window_end}). "
+            f"Форматы в логах: {fmt_hint}. "
+            f"Паттернов: {len(patterns)}."
         )
     if time_slice.truncated:
         errors.append(
@@ -261,8 +377,11 @@ def filter_logs(req: FilterLogsRequest) -> FilterLogsResponse:
         status=status,
         step="sources_and_filter",
         time_filter_mode=req.time_filter_mode,
+        time_filter_strategy=req.time_filter_strategy,
         sources=sources,
         patterns_used=patterns if not full_corpus else [],
+        patterns_expanded=patterns_expanded,
+        detected_format_summary=_format_summary(detected),
         total_matching_lines=total,
         by_file=by_file,
         sample_lines=samples,
