@@ -1,0 +1,159 @@
+"""Сжатое досье для LLM (шаг 6) из результатов шагов 0–5."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from incident_intent.conclusion_models import FilterSummary, IncidentConclusionRequest
+from incident_intent.models import IntentTable
+
+
+def _intent_payload(table: IntentTable) -> dict[str, Any]:
+    return {
+        "incident_date": table.incident_date.value,
+        "time_window": {
+            "start": table.time_window_start.value,
+            "end": table.time_window_end.value,
+        },
+        "symptoms": table.symptoms,
+        "search_keywords": table.search_keywords,
+        "investigation_goal": table.investigation_goal,
+        "input_confidence": table.confidence,
+        "notes": table.notes,
+    }
+
+
+def _trim_samples(
+    lines: list[dict[str, Any]],
+    *,
+    limit: int,
+    budget: list[int],
+) -> list[dict[str, Any]]:
+    if limit <= 0 or budget[0] <= 0:
+        return []
+    out: list[dict[str, Any]] = []
+    for item in lines[:limit]:
+        if budget[0] <= 0:
+            break
+        text = str(item.get("text", ""))
+        if len(text) > 500:
+            item = {**item, "text": text[:500] + "…"}
+        out.append(item)
+        budget[0] -= 1
+    return out
+
+
+def build_evidence_payload(req: IncidentConclusionRequest) -> dict[str, Any]:
+    budget = [req.max_evidence_samples]
+    fs = req.filter_summary
+
+    payload: dict[str, Any] = {
+        "step0_intent": _intent_payload(req.intent_table),
+        "step1_2_slice": {
+            "ran": fs.time_window_line_count > 0 or fs.total_matching_lines > 0,
+            "patterns_used": fs.patterns_used,
+            "total_lines_in_time_window": fs.total_matching_lines,
+            "lines_in_passed_slice": fs.time_window_line_count,
+            "truncated": fs.time_window_truncated,
+            "files_in_window": fs.files_in_window[:30],
+        },
+        "step3_keywords": {"ran": False},
+        "step4_slow_requests": {"ran": False},
+        "step5_errors": {"ran": False},
+    }
+
+    if req.symptom_search and req.symptom_search.status == "ok":
+        s3 = req.symptom_search
+        samples = [
+            {
+                "file": s.file,
+                "line": s.line_number,
+                "matched_keyword": s.matched_keyword,
+                "text": s.text,
+            }
+            for s in s3.sample_lines
+        ]
+        payload["step3_keywords"] = {
+            "ran": True,
+            "search_keywords_used": s3.search_keywords_used,
+            "total_matching_lines": s3.total_matching_lines,
+            "by_file": [
+                {"file": f.relative_path, "matches": f.match_count}
+                for f in s3.by_file[:15]
+            ],
+            "prior_conclusions": s3.conclusions,
+            "sample_lines": _trim_samples(samples, limit=10, budget=budget),
+        }
+
+    if req.slow_requests and req.slow_requests.status == "ok":
+        s4 = req.slow_requests
+        payload["step4_slow_requests"] = {
+            "ran": True,
+            "min_duration_ms": s4.min_duration_ms,
+            "slow_request_count": len(s4.slow_requests),
+            "top_requests": [
+                {
+                    "ended_at": r.ended_at,
+                    "method": r.method,
+                    "path": r.path,
+                    "duration_min": r.duration_min,
+                    "duration_ms": r.duration_ms,
+                }
+                for r in s4.slow_requests[:15]
+            ],
+            "by_path": [
+                {
+                    "path": p.path,
+                    "count": p.count,
+                    "max_duration_min": p.max_duration_min,
+                }
+                for p in s4.by_path[:10]
+            ],
+            "prior_conclusions": s4.conclusions,
+        }
+
+    if req.error_correlation and req.error_correlation.status == "ok":
+        s5 = req.error_correlation
+        samples = [
+            {
+                "time": e.timestamp,
+                "category": e.category,
+                "file": e.file,
+                "line": e.line_number,
+                "pattern": e.matched_pattern,
+                "text": e.text,
+            }
+            for e in s5.errors_in_window[:10]
+        ]
+        payload["step5_errors"] = {
+            "ran": True,
+            "correlation_window_sec": s5.correlation_window_sec,
+            "error_count": len(s5.errors_in_window),
+            "by_category": [
+                {"category": c.category, "count": c.count} for c in s5.by_category
+            ],
+            "correlations": [
+                {
+                    "slow_request": {
+                        "ended_at": c.slow_request.ended_at,
+                        "method": c.slow_request.method,
+                        "path": c.slow_request.path,
+                        "duration_min": c.slow_request.duration_min,
+                    },
+                    "related_error_count": len(c.related_errors),
+                    "related_errors": [
+                        {
+                            "time": e.timestamp,
+                            "category": e.category,
+                            "pattern": e.matched_pattern,
+                        }
+                        for e in c.related_errors[:5]
+                    ],
+                }
+                for c in s5.correlations[:10]
+            ],
+            "prior_conclusions": s5.conclusions,
+            "sample_errors": _trim_samples(samples, limit=10, budget=budget),
+        }
+
+    return payload

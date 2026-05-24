@@ -1,0 +1,30 @@
+services:
+  incident-intent-poc:
+    build: .
+    container_name: incident-intent-poc
+    ports:
+      - "${POC_PORT:-8090}:8090"
+    environment:
+      OLLAMA_BASE_URL: http://tsrag-ollama:11434
+      OLLAMA_MODEL: llama3.1:8b-instruct-q6_K
+      OLLAMA_TIMEOUT_SEC: "1200"
+      OLLAMA_NUM_CTX: "32768"
+      POC_IN_DOCKER: "1"
+      # Префиксы Windows → точки монтирования в контейнере
+      POC_RAG_HOST_PREFIX: "D:/RAG"
+      POC_RAG_MOUNT: "/rag"
+      POC_CASEONE_HOST_PREFIX: "D:/RAG/tsrag/temp/uploads/caseone"
+      POC_CASEONE_MOUNT: "/caseone"
+    volumes:
+      # Логи: D:\RAG\REN-MSKCASPRO01_* → /rag/REN-MSKCASPRO01_*
+      - ${POC_LOGS_HOST_DIR:-D:/RAG}:/rag:ro
+      # CaseOne (если каталог есть на хосте)
+      - ${POC_CASEONE_HOST_DIR:-D:/RAG/tsrag/temp/uploads/caseone}:/caseone:ro
+    networks:
+      - shared-network
+    restart: unless-stopped
+
+networks:
+  shared-network:
+    external: true
+    name: shared-network
