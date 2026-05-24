@@ -201,6 +201,20 @@
       <pre id="errorCorrelations" style="max-height:220px"></pre>
     </div>
 
+    <div id="contextResult" class="panel" hidden>
+      <h2>Контекст E1–E3 <span id="contextBadge" class="badge"></span></h2>
+      <p id="contextSummary" class="meta"></p>
+      <h3 style="font-size:0.95rem;margin:1rem 0 0.35rem">E1 — WorkflowTrace</h3>
+      <ul id="workflowConclusions"></ul>
+      <table id="workflowPairsTable"><thead><tr><th>Операция</th><th>Начало</th><th>Конец</th><th>сек</th></tr></thead><tbody></tbody></table>
+      <h3 style="font-size:0.95rem;margin:1rem 0 0.35rem">E2 — ClientLogs</h3>
+      <ul id="clientConclusions"></ul>
+      <pre id="clientSamples" style="max-height:160px"></pre>
+      <h3 style="font-size:0.95rem;margin:1rem 0 0.35rem">E3 — caseone config</h3>
+      <ul id="caseoneConclusions"></ul>
+      <pre id="caseoneSnippets" style="max-height:180px"></pre>
+    </div>
+
     <div id="conclusionResult" class="panel" hidden>
       <h2>Шаг 6 <span id="conclusionBadge" class="badge"></span> <span id="conclusionConfidence" class="badge"></span></h2>
       <p id="conclusionReason" class="meta"></p>
@@ -234,6 +248,9 @@
     let lastSymptomData = null;
     let lastSlowData = null;
     let lastErrorData = null;
+    let lastWorkflowTrace = null;
+    let lastClientLogs = null;
+    let lastCaseoneConfig = null;
     let pendingLoading = false;
     let stepRunning = false;
 
@@ -577,6 +594,89 @@
         : "—";
     }
 
+    function contextLinesForAnalysis() {
+      return lastSlowTimeWindow.length ? lastSlowTimeWindow : lastTimeWindow;
+    }
+
+    async function runContextAnalyses() {
+      const lines = contextLinesForAnalysis();
+      const paths = sessionPaths();
+      const keywords = lastIntent?.table?.search_keywords || [];
+      const bodyLines = JSON.stringify({ time_window_lines: lines });
+      const fetches = [
+        fetch("/api/analyze-workflow-trace", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: bodyLines,
+        }),
+        fetch("/api/analyze-client-logs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: bodyLines,
+        }),
+      ];
+      if (paths.caseone_path) {
+        fetches.push(
+          fetch("/api/index-caseone-config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              caseone_path: paths.caseone_path,
+              search_keywords: keywords,
+            }),
+          })
+        );
+      }
+      const results = await Promise.all(fetches);
+      const wtRes = results[0];
+      const clRes = results[1];
+      lastWorkflowTrace = await wtRes.json();
+      if (!wtRes.ok) throw new Error(lastWorkflowTrace.detail || wtRes.statusText);
+      lastClientLogs = await clRes.json();
+      if (!clRes.ok) throw new Error(lastClientLogs.detail || clRes.statusText);
+      if (results[2]) {
+        lastCaseoneConfig = await results[2].json();
+        if (!results[2].ok) throw new Error(lastCaseoneConfig.detail || results[2].statusText);
+      } else {
+        lastCaseoneConfig = null;
+      }
+      renderContextResult();
+    }
+
+    function renderContextResult() {
+      document.getElementById("contextResult").hidden = false;
+      const wt = lastWorkflowTrace;
+      const cl = lastClientLogs;
+      const cc = lastCaseoneConfig;
+      const anyRan = (wt && wt.ran) || (cl && cl.ran) || (cc && cc.ran);
+      const badge = document.getElementById("contextBadge");
+      badge.textContent = anyRan ? "ok" : "—";
+      badge.className = "badge " + (anyRan ? "complete" : "needs");
+      document.getElementById("contextSummary").textContent =
+        `Срез: ${contextLinesForAnalysis().length} строк · ` +
+        `WorkflowTrace: ${wt?.ran ? wt.line_count + " строк" : "нет"} · ` +
+        `Client: ${cl?.ran ? cl.event_count + " событий" : "нет"} · ` +
+        `caseone: ${cc?.ran ? cc.snippets?.length + " фрагментов" : (cc ? "нет совпадений" : "не сканировался")}`;
+
+      document.getElementById("workflowConclusions").innerHTML = (wt?.conclusions || [])
+        .map(s => `<li>${escapeHtml(s)}</li>`).join("");
+      const wtbody = document.querySelector("#workflowPairsTable tbody");
+      wtbody.innerHTML = (wt?.paired_operations || []).map(p =>
+        `<tr><td>${escapeHtml(p.label)}</td><td>${escapeHtml(p.begin_at||"—")}</td>` +
+        `<td>${escapeHtml(p.end_at||"—")}</td><td>${p.duration_sec != null ? p.duration_sec.toFixed(1) : "—"}</td></tr>`
+      ).join("");
+
+      document.getElementById("clientConclusions").innerHTML = (cl?.conclusions || [])
+        .map(s => `<li>${escapeHtml(s)}</li>`).join("");
+      document.getElementById("clientSamples").textContent = (cl?.sample_lines || [])
+        .map(e => `[${e.category}] ${e.source_file}:${e.line_number}\n${e.text}`).join("\n\n") || "—";
+
+      document.getElementById("caseoneConclusions").innerHTML = (cc?.conclusions || [])
+        .map(s => `<li>${escapeHtml(s)}</li>`).join("");
+      document.getElementById("caseoneSnippets").textContent = (cc?.snippets || [])
+        .map(s => `${s.file} :: ${s.key_path} = ${s.value}`).join("\n") || "—";
+    }
+
     function renderConclusionResult(data) {
       document.getElementById("conclusionResult").hidden = false;
       const badge = document.getElementById("conclusionBadge");
@@ -814,6 +914,10 @@
 
     conclusionBtn.addEventListener("click", () => runStep(conclusionBtn, "conclusionResult", "Шаг 6", async () => {
       if (!lastIntent?.table) throw new Error("Нет таблицы намерений.");
+      if (!contextLinesForAnalysis().length) throw new Error("Нет среза логов — выполните шаги 1–2.");
+      await runContextAnalyses();
+      const paths = sessionPaths();
+      const ctxLines = contextLinesForAnalysis();
       const res = await fetch("/api/incident-conclusion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -823,6 +927,13 @@
           symptom_search: lastSymptomData,
           slow_requests: lastSlowData,
           error_correlation: lastErrorData,
+          time_window_lines: lastTimeWindow,
+          slow_time_window_lines: lastSlowTimeWindow,
+          context_time_window_lines: ctxLines,
+          caseone_path: paths.caseone_path || null,
+          workflow_trace: lastWorkflowTrace,
+          client_logs: lastClientLogs,
+          caseone_config: lastCaseoneConfig,
         }),
       });
       const data = await res.json();

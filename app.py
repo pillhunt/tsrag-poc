@@ -12,10 +12,21 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
+from incident_intent.caseone_config_index import index_caseone_config
+from incident_intent.client_log_analysis import analyze_client_logs
 from incident_intent.conclusion_models import (
     IncidentConclusionRequest,
     IncidentConclusionResponse,
 )
+from incident_intent.e_analysis_models import (
+    CaseoneConfigIndexRequest,
+    CaseoneConfigIndexResponse,
+    ClientLogAnalysisRequest,
+    ClientLogAnalysisResponse,
+    WorkflowTraceAnalysisRequest,
+    WorkflowTraceAnalysisResponse,
+)
+from incident_intent.workflow_trace_analysis import analyze_workflow_trace
 from incident_intent.dialog_models import DialogResponse, DialogState
 from incident_intent.dialog_service import (
     continue_dialog,
@@ -178,6 +189,27 @@ async def slow_requests_endpoint(body: SlowRequestsRequest) -> SlowRequestsRespo
 @app.post("/api/correlate-errors", response_model=CorrelateErrorsResponse)
 async def correlate_errors_endpoint(body: CorrelateErrorsRequest) -> CorrelateErrorsResponse:
     return await asyncio.to_thread(correlate_errors, body)
+
+
+@app.post("/api/analyze-workflow-trace", response_model=WorkflowTraceAnalysisResponse)
+async def analyze_workflow_trace_endpoint(
+    body: WorkflowTraceAnalysisRequest,
+) -> WorkflowTraceAnalysisResponse:
+    return await asyncio.to_thread(analyze_workflow_trace, body)
+
+
+@app.post("/api/analyze-client-logs", response_model=ClientLogAnalysisResponse)
+async def analyze_client_logs_endpoint(
+    body: ClientLogAnalysisRequest,
+) -> ClientLogAnalysisResponse:
+    return await asyncio.to_thread(analyze_client_logs, body)
+
+
+@app.post("/api/index-caseone-config", response_model=CaseoneConfigIndexResponse)
+async def index_caseone_config_endpoint(
+    body: CaseoneConfigIndexRequest,
+) -> CaseoneConfigIndexResponse:
+    return await asyncio.to_thread(index_caseone_config, body)
 
 
 @app.post("/api/incident-conclusion", response_model=IncidentConclusionResponse)

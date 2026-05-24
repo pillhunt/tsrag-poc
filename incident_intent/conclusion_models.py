@@ -4,7 +4,13 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from incident_intent.e_analysis_models import (
+    CaseoneConfigIndexResponse,
+    ClientLogAnalysisResponse,
+    WorkflowTraceAnalysisResponse,
+)
 from incident_intent.error_correlation_models import CorrelateErrorsResponse
+from incident_intent.log_filter_models import TimeWindowLine
 from incident_intent.models import IntentTable
 from incident_intent.slow_requests_models import SlowRequestsResponse
 from incident_intent.symptom_search_models import SymptomSearchResponse
@@ -28,6 +34,22 @@ class IncidentConclusionRequest(BaseModel):
     symptom_search: SymptomSearchResponse | None = None
     slow_requests: SlowRequestsResponse | None = None
     error_correlation: CorrelateErrorsResponse | None = None
+    time_window_lines: list[TimeWindowLine] = Field(
+        default_factory=list,
+        description="Срез жалобы (шаги 1–2) — для авто E1/E2",
+    )
+    slow_time_window_lines: list[TimeWindowLine] = Field(
+        default_factory=list,
+        description="Расширенный срез (шаги 4–5) — приоритет для E1/E2",
+    )
+    context_time_window_lines: list[TimeWindowLine] = Field(
+        default_factory=list,
+        description="Явный срез для E1/E2; иначе slow → time",
+    )
+    caseone_path: str | None = None
+    workflow_trace: WorkflowTraceAnalysisResponse | None = None
+    client_logs: ClientLogAnalysisResponse | None = None
+    caseone_config: CaseoneConfigIndexResponse | None = None
     max_evidence_samples: int = Field(default=20, ge=0, le=50)
 
 

@@ -14,6 +14,7 @@ from incident_intent.dialog_parse import (
     parse_time_from_dialog,
 )
 from incident_intent.duration_utils import normalize_min_slow_request_ms
+from incident_intent.keyword_expand import expand_keywords_with_english
 from incident_intent.keyword_utils import normalize_search_keywords
 from incident_intent.log_folder import hint_from_logs_path
 from incident_intent.models import IntentField, IntentTable, IntentTableRequest, IntentTableResponse
@@ -380,6 +381,10 @@ async def build_intent_table(req: IntentTableRequest) -> IntentTableResponse:
 
     table = _table_from_llm(raw, req, folder_date)
     _enrich_table_from_dialog(table, req)
+    expanded_kw, kw_notes = expand_keywords_with_english(table.search_keywords)
+    if expanded_kw and expanded_kw != table.search_keywords:
+        table.search_keywords = expanded_kw
+        table.notes.extend(kw_notes)
     _apply_slow_window_and_duration(table, raw, req)
     apply_multi_format_patterns(table)
     status = _resolve_status(table, req)

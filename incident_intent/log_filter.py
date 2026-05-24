@@ -8,6 +8,7 @@ import os
 from collections import defaultdict
 from pathlib import Path
 
+from incident_intent.log_date_range import format_date_range_hint, probe_log_date_range
 from incident_intent.log_discovery import discover_log_files, is_priority_log, log_kind_for_path
 from incident_intent.path_resolve import (
     is_docker_runtime,
@@ -357,6 +358,18 @@ def filter_logs(req: FilterLogsRequest) -> FilterLogsResponse:
             f"Форматы в логах: {fmt_hint}. "
             f"Паттернов: {len(patterns)}."
         )
+        min_d, max_d = probe_log_date_range(
+            logs_path,
+            sources.log_files,
+            logs_is_file=sources.logs_is_file,
+        )
+        range_hint = format_date_range_hint(
+            min_d,
+            max_d,
+            requested_date=req.incident_date,
+        )
+        if range_hint:
+            errors.append(range_hint)
     if time_slice.truncated:
         errors.append(
             f"Срез обрезан до {len(time_slice.lines)} строк (всего в окне {total}). "

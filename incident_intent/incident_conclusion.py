@@ -13,6 +13,7 @@ from incident_intent.conclusion_models import (
     IncidentConclusionRequest,
     IncidentConclusionResponse,
 )
+from incident_intent.context_analysis import enrich_conclusion_request
 from incident_intent.evidence_bundle import build_evidence_payload
 from incident_intent.ollama_client import OllamaError, chat_json
 
@@ -68,6 +69,7 @@ async def build_incident_conclusion(
             ],
         )
 
+    req = enrich_conclusion_request(req)
     evidence = build_evidence_payload(req)
     user_message = (
         "Факты разбора инцидента (JSON). Напиши заключение по логам и confidence.\n\n"

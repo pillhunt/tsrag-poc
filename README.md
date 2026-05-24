@@ -8,7 +8,7 @@
 - **Шаг 3:** `search_keywords` по срезу.
 - **Шаг 4:** долгие HTTP/access-запросы (CaseOne middleware, nginx, IIS и др.) в строках среза.
 - **Шаг 5:** ошибки во **всех файлах среза** + привязка по времени к долгим запросам (шаг 4).
-- **Шаг 6:** Ollama → итоговое заключение по фактам шагов 0–5 (`conclusion_markdown`, **confidence** по логам, `supported_by`, `not_proven`, `recommended_actions`). HITL не реализован.
+- **Шаг 6:** перед LLM — E1 WorkflowTrace, E2 ClientLogs, E3 индекс `caseone` (json/conf); Ollama → заключение по досье шагов 0–5 + E1–E3. HITL не реализован.
 
 ## Что делает скрипт (алгоритм шага 0)
 
@@ -106,7 +106,9 @@ python -m uvicorn app:app --host 0.0.0.0 --port 8090
 
 ### `POST /api/incident-conclusion`
 
-Шаг 6: LLM формирует заключение по JSON-досье из результатов предыдущих шагов (без повторного чтения логов).
+Шаг 6: автоматически E1–E3 по срезу, затем LLM по JSON-досье (без повторного чтения логов).
+
+API E1–E3: `POST /api/analyze-workflow-trace`, `POST /api/analyze-client-logs`, `POST /api/index-caseone-config` (тело: `time_window_lines` и/или `caseone_path` + `search_keywords`).
 
 ```json
 {

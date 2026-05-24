@@ -65,12 +65,14 @@
 
 ## **E. Что задумывали в алгоритме, но в PoC нет**
 
-1. **Парсинга** `WorkflowTrace.log` **нет** — **не исправлено** (файл попадает в срез и в keyword/error search, отдельного шага «этапы workflow» нет).
-2. **Парсинга client / console логов нет** — **не исправлено** (`ClientLogs.log` только в приоритете discovery).
-3. **Исходный код и API-документ не используются** — **не исправлено** (фаза 4 плана B: индекс json/conf из `caseone_path` — не сделана).
+1. **Парсинг** `WorkflowTrace.log` — **исправлено (E1):** `workflow_trace_analysis.py`, API `/api/analyze-workflow-trace`, пары начало/конец, досье `step_workflow_trace`.
+2. **Парсинг client / console** — **исправлено (E2):** `client_log_analysis.py`, API `/api/analyze-client-logs`, досье `step_client_logs`.
+3. **Конфиг caseone** — **исправлено (E3):** `caseone_config_index.py`, API `/api/index-caseone-config`, досье `step_caseone_config` (json/conf, секреты маскируются). Исходники C# по-прежнему не читаются.
 4. **HITL** (правка заключения человеком) **нет** — **не исправлено**.
 
-**Итог:** вывод шага 6 про клиент, браузер и смысл операции **не доказывается** кодом; только косвенно через keywords и общие ошибки.
+**Итог:** шаг 6 получает факты E1–E3 в JSON; UI — панель «Контекст E1–E3» перед LLM. HITL — открытый пункт.
+
+**План:** [uni_poc_E_plan.md](./uni_poc_E_plan.md)
 
 ---
 
@@ -110,7 +112,8 @@
 |--------|-----|
 | **Закрыто** | A (чат/upload), B (шаги 4–5), C (нейтральные примеры), H |
 | **Частично** | D (порог slow из жалобы; ±90 с и лимиты — нет), **F (мульти-паттерны + auto parse; TZ — нет)** |
-| **Открыто** | E (WorkflowTrace, client, caseone/conf, HITL), A.4–5 (legacy REN, Ollama compose), B.5–6 (промпт CaseOne, caseone не читается), C.5 (ProjectTypes vs Projects) |
+| **Частично** | **E** (E1–E3 ✓, HITL — нет), D, F (TZ) |
+| **Открыто** | A.4–5 (legacy REN, Ollama), B.5–6 (промпт CaseOne), C.5 (ProjectTypes), **E.4 HITL** |
 
 - **Универсально сейчас:** upload → шаг 0 → срез → keywords / slow / errors (много форматов) → заключение.
 - **Узкие места:** формат меток времени в срезе (F), ±90 с (D.2), trace/client (E), legacy `path_resolve` (A).

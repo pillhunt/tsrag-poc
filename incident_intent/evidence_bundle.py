@@ -68,6 +68,9 @@ def build_evidence_payload(req: IncidentConclusionRequest) -> dict[str, Any]:
         "step3_keywords": {"ran": False},
         "step4_slow_requests": {"ran": False},
         "step5_errors": {"ran": False},
+        "step_workflow_trace": {"ran": False},
+        "step_client_logs": {"ran": False},
+        "step_caseone_config": {"ran": False},
     }
 
     if req.symptom_search and req.symptom_search.status == "ok":
@@ -169,6 +172,62 @@ def build_evidence_payload(req: IncidentConclusionRequest) -> dict[str, Any]:
             ],
             "prior_conclusions": s5.conclusions,
             "sample_errors": _trim_samples(samples, limit=10, budget=budget),
+        }
+
+    wt = req.workflow_trace
+    if wt and wt.status == "ok":
+        payload["step_workflow_trace"] = {
+            "ran": wt.ran,
+            "files_matched": wt.files_matched[:10],
+            "line_count": wt.line_count,
+            "paired_operations": [
+                {
+                    "label": p.label,
+                    "begin_at": p.begin_at,
+                    "end_at": p.end_at,
+                    "duration_sec": p.duration_sec,
+                }
+                for p in wt.paired_operations[:15]
+            ],
+            "anomalies": wt.anomalies[:10],
+            "prior_conclusions": wt.conclusions,
+        }
+
+    cl = req.client_logs
+    if cl and cl.status == "ok":
+        cl_samples = [
+            {
+                "category": e.category,
+                "file": e.source_file,
+                "line": e.line_number,
+                "time": e.timestamp,
+                "text": e.text,
+            }
+            for e in cl.sample_lines
+        ]
+        payload["step_client_logs"] = {
+            "ran": cl.ran,
+            "event_count": cl.event_count,
+            "by_category": cl.by_category,
+            "prior_conclusions": cl.conclusions,
+            "sample_lines": _trim_samples(cl_samples, limit=8, budget=budget),
+        }
+
+    cc = req.caseone_config
+    if cc and cc.status == "ok":
+        payload["step_caseone_config"] = {
+            "ran": cc.ran,
+            "caseone_path": cc.caseone_path,
+            "files_scanned": cc.files_scanned,
+            "snippets": [
+                {
+                    "file": s.file,
+                    "key": s.key_path,
+                    "value": s.value,
+                }
+                for s in cc.snippets[:15]
+            ],
+            "prior_conclusions": cc.conclusions,
         }
 
     return payload
