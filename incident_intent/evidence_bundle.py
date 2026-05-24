@@ -106,9 +106,11 @@ def build_evidence_payload(req: IncidentConclusionRequest) -> dict[str, Any]:
                     "path": r.path,
                     "duration_min": r.duration_min,
                     "duration_ms": r.duration_ms,
+                    "log_format": r.log_format,
                 }
                 for r in s4.slow_requests[:15]
             ],
+            "parsed_by_format": s4.parsed_by_format,
             "by_path": [
                 {
                     "path": p.path,
@@ -125,6 +127,7 @@ def build_evidence_payload(req: IncidentConclusionRequest) -> dict[str, Any]:
         samples = [
             {
                 "time": e.timestamp,
+                "engine": e.error_engine,
                 "category": e.category,
                 "file": e.file,
                 "line": e.line_number,
@@ -136,9 +139,13 @@ def build_evidence_payload(req: IncidentConclusionRequest) -> dict[str, Any]:
         payload["step5_errors"] = {
             "ran": True,
             "correlation_window_sec": s5.correlation_window_sec,
+            "global_log_only": s5.global_log_only,
             "error_count": len(s5.errors_in_window),
             "by_category": [
                 {"category": c.category, "count": c.count} for c in s5.by_category
+            ],
+            "by_engine": [
+                {"engine": c.engine, "count": c.count} for c in s5.by_engine
             ],
             "correlations": [
                 {

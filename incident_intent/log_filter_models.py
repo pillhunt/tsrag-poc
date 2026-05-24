@@ -9,6 +9,10 @@ class LogFileInfo(BaseModel):
     relative_path: str
     size_bytes: int
     priority: bool = False
+    log_kind: str = Field(
+        default="unknown",
+        description="app | web | db | unknown — эвристика по имени/пути",
+    )
 
 
 class SourcesCheck(BaseModel):

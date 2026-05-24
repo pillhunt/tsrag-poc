@@ -35,7 +35,7 @@ def _build_conclusions(total: int, keywords: list[str], *, from_slice: int) -> l
         ]
     return [
         f"Найдено {total} строк (из {from_slice} в срезе) по {len(keywords)} ключевым словам.",
-        "Следующий шаг — долгие запросы в RequestLoggingMiddleware (шаг 4).",
+        "Следующий шаг — долгие HTTP-запросы (шаг 4) по тому же срезу.",
     ]
 
 

@@ -1,18 +1,14 @@
 """
-Шаг 4: долгие HTTP-запросы только в срезе строк из шагов 1–2 (middleware).
+Шаг 4: долгие HTTP-запросы в срезе строк из шагов 1–2 (любые access-форматы).
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
-from pathlib import Path
 
+from incident_intent.http_access_parsers import parse_http_access_line
 from incident_intent.keyword_utils import find_matching_keyword, merge_keywords
-from incident_intent.slow_request_parser import (
-    duration_to_minutes,
-    is_middleware_log,
-    parse_request_line,
-)
+from incident_intent.slow_request_parser import duration_to_minutes
 from incident_intent.slow_requests_models import (
     SlowRequestPathStats,
     SlowRequestRow,
@@ -22,35 +18,44 @@ from incident_intent.slow_requests_models import (
 from incident_intent.time_window_input import require_time_window_slice
 
 
+def _resolve_http_access_only(req: SlowRequestsRequest) -> bool:
+    if req.middleware_only is True:
+        return True
+    return req.http_access_only
+
+
 def _build_conclusions(
     rows: list[SlowRequestRow],
     min_ms: int,
     *,
     slice_lines: int,
-    middleware_lines: int,
+    scanned_lines: int,
     unparsed: int,
+    parsed_by_format: dict[str, int],
 ) -> list[str]:
-    if middleware_lines == 0:
+    if scanned_lines == 0:
         return [
-            f"В срезе шагов 1–2 ({slice_lines} строк) нет строк из RequestLoggingMiddleware.",
-            "Проверьте, что в окне времени есть записи middleware-лога.",
+            f"В срезе шагов 1–2 ({slice_lines} строк) нет строк для анализа HTTP/access.",
+            "Проверьте, что в окне времени есть access/middleware/nginx/IIS логи.",
         ]
 
     if not rows:
+        fmt_hint = ", ".join(f"{k}={v}" for k, v in sorted(parsed_by_format.items()))
+        extra = f" Распознано по форматам: {fmt_hint}." if fmt_hint else ""
         return [
-            f"В срезе middleware ({middleware_lines} строк) нет запросов ≥ {min_ms / 60_000:.0f} мин.",
+            f"В срезе ({scanned_lines} строк) нет запросов ≥ {min_ms / 60_000:.0f} мин.{extra}",
             "Снизьте min_duration_ms или расширьте временное окно на шаге 0.",
         ]
 
     top = rows[0]
     lines = [
         f"Самый долгий (в срезе): {top.method} {top.path} — {top.duration_min} мин, "
-        f"метка {top.ended_at or '?'}",
-        f"Проанализировано строк middleware в срезе: {middleware_lines} из {slice_lines}.",
-        "Следующий шаг — ошибки в global.log на время окончания (шаг 5).",
+        f"метка {top.ended_at or '?'} ({top.log_format or '?'})",
+        f"Проанализировано строк в срезе: {scanned_lines} из {slice_lines}.",
+        "Следующий шаг — ошибки во всех логах среза (шаг 5).",
     ]
     if unparsed > 0:
-        lines.append(f"Не разобрано строк middleware в срезе: {unparsed}.")
+        lines.append(f"Строк без распознанного HTTP/access: {unparsed}.")
     return lines
 
 
@@ -69,27 +74,29 @@ def find_slow_requests(req: SlowRequestsRequest) -> SlowRequestsResponse:
             errors=["filter_by_keywords=true, но search_keywords пуст."],
         )
 
+    http_access_only = _resolve_http_access_only(req)
     candidates: list[SlowRequestRow] = []
     parsed_count = 0
     unparsed = 0
-    middleware_lines = 0
-    middleware_files: set[str] = set()
+    scanned_lines = 0
+    access_files: set[str] = set()
+    parsed_by_format: dict[str, int] = defaultdict(int)
 
     for line in time_slice.lines:
-        if req.middleware_only and not is_middleware_log(line.file):
-            continue
-        middleware_lines += 1
-        middleware_files.add(line.file)
-
-        parsed = parse_request_line(
+        parsed = parse_http_access_line(
             line.text,
             source_file=line.file,
             line_number=line.line_number,
         )
         if parsed is None:
-            unparsed += 1
+            if not http_access_only:
+                unparsed += 1
             continue
+
+        scanned_lines += 1
+        access_files.add(line.file)
         parsed_count += 1
+        parsed_by_format[parsed.log_format] += 1
 
         if parsed.duration_ms < req.min_duration_ms:
             continue
@@ -109,9 +116,10 @@ def find_slow_requests(req: SlowRequestsRequest) -> SlowRequestsResponse:
                 path=parsed.path,
                 duration_ms=parsed.duration_ms,
                 duration_min=duration_to_minutes(parsed.duration_ms),
-                source_file=parsed.source_file,
-                line_number=parsed.line_number,
+                source_file=line.file,
+                line_number=line.line_number,
                 matched_keyword=matched_kw,
+                log_format=parsed.log_format,
             )
         )
 
@@ -139,7 +147,9 @@ def find_slow_requests(req: SlowRequestsRequest) -> SlowRequestsResponse:
         time_patterns_used=req.log_search_patterns,
         min_duration_ms=req.min_duration_ms,
         filter_by_keywords=req.filter_by_keywords,
-        middleware_files_scanned=sorted(middleware_files),
+        http_access_only=http_access_only,
+        access_files_scanned=sorted(access_files),
+        parsed_by_format=dict(parsed_by_format),
         parsed_line_count=parsed_count,
         unparsed_in_window=unparsed,
         slow_requests=slow_rows,
@@ -148,8 +158,9 @@ def find_slow_requests(req: SlowRequestsRequest) -> SlowRequestsResponse:
             slow_rows,
             req.min_duration_ms,
             slice_lines=len(time_slice.lines),
-            middleware_lines=middleware_lines,
+            scanned_lines=scanned_lines,
             unparsed=unparsed,
+            parsed_by_format=dict(parsed_by_format),
         ),
         errors=[],
     )

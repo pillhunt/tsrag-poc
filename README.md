@@ -6,8 +6,8 @@
 - **Шаги 1–2:** срез логов по времени → `time_window_lines` (все строки окна, с лимитом).
 - **Шаг 3–4:** поиск **только в `time_window_lines`** из шагов 1–2 (повторного чтения логов с диска нет).
 - **Шаг 3:** `search_keywords` по срезу.
-- **Шаг 4:** долгие HTTP в строках middleware из того же среза.
-- **Шаг 5:** ошибки в `global.log` из среза + привязка по времени к долгим запросам (шаг 4).
+- **Шаг 4:** долгие HTTP/access-запросы (CaseOne middleware, nginx, IIS и др.) в строках среза.
+- **Шаг 5:** ошибки во **всех файлах среза** + привязка по времени к долгим запросам (шаг 4).
 - **Шаг 6:** Ollama → итоговое заключение по фактам шагов 0–5 (`conclusion_markdown`, **confidence** по логам, `supported_by`, `not_proven`, `recommended_actions`). HITL не реализован.
 
 ## Что делает скрипт (алгоритм шага 0)
@@ -85,11 +85,11 @@ python -m uvicorn app:app --host 0.0.0.0 --port 8090
 }
 ```
 
-Шаг 4 дополнительно: `min_duration_ms`, `top_n`, `middleware_only` (только строки middleware **внутри среза**).
+Шаг 4 дополнительно: `min_duration_ms`, `top_n`, `http_access_only` (только строки, распознанные как HTTP/access).
 
 ### `POST /api/correlate-errors`
 
-Шаг 5: ошибки в срезе + корреляция с `slow_requests` (±`correlation_window_sec`, по умолчанию 90 с).
+Шаг 5: ошибки во **всех файлах** среза + корреляция с `slow_requests` (±`correlation_window_sec`, по умолчанию 90 с).
 
 ```json
 {
@@ -98,11 +98,11 @@ python -m uvicorn app:app --host 0.0.0.0 --port 8090
   "time_window_lines": [],
   "slow_requests": [],
   "correlation_window_sec": 90,
-  "global_log_only": true
+  "global_log_only": false
 }
 ```
 
-Категории: `sql_deadlock`, `sql_pk_duplicate`, `sql_timeout`, `concurrency`, `connection`, `generic_error`.
+Категории задаются в `incident_intent/error_rules.yaml` (MSSQL, PostgreSQL, nginx, IIS, .NET app + `generic_error`).
 
 ### `POST /api/incident-conclusion`
 

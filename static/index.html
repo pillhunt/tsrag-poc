@@ -189,7 +189,7 @@
       <h2>Шаг 4 <span id="slowBadge" class="badge"></span></h2>
       <p id="slowSummary" class="meta"></p>
       <ul id="slowConclusions"></ul>
-      <table id="slowTable"><thead><tr><th>Время</th><th>Метод</th><th>API</th><th>мин</th><th>мс</th></tr></thead><tbody></tbody></table>
+      <table id="slowTable"><thead><tr><th>Время</th><th>Метод</th><th>API</th><th>мин</th><th>мс</th><th>Формат</th></tr></thead><tbody></tbody></table>
     </div>
 
     <div id="errorResult" class="panel" hidden>
@@ -520,7 +520,8 @@
 
       const rows = data.slow_requests || [];
       document.getElementById("slowSummary").textContent =
-        `Медленных: ${rows.length} · порог: ${data.min_duration_ms} мс · распознано строк: ${data.parsed_line_count ?? "?"}`;
+        `Медленных: ${rows.length} · порог: ${data.min_duration_ms} мс · распознано: ${data.parsed_line_count ?? "?"}` +
+        (data.parsed_by_format ? ` · форматы: ${Object.entries(data.parsed_by_format).map(([k,v])=>k+":"+v).join(", ")}` : "");
 
       document.getElementById("slowConclusions").innerHTML = (data.conclusions||[]).length
         ? (data.conclusions||[]).map(c => `<li>${escapeHtml(c)}</li>`).join("")
@@ -533,8 +534,9 @@
             <td><code>${escapeHtml(r.path)}</code></td>
             <td>${r.duration_min}</td>
             <td>${r.duration_ms}</td>
+            <td>${escapeHtml(r.log_format || "—")}</td>
           </tr>`).join("")
-        : "<tr><td colspan=\"5\">Нет запросов выше порога</td></tr>";
+        : "<tr><td colspan=\"6\">Нет запросов выше порога</td></tr>";
     }
 
     function renderErrorResult(data) {
@@ -552,7 +554,7 @@
         : "";
 
       document.getElementById("errorList").textContent = errors.length
-        ? errors.map(e => `${e.file}:${e.line_number} [${e.category}]  ${e.text}`).join("\n")
+        ? errors.map(e => `${e.file}:${e.line_number} [${e.error_engine}/${e.category}]  ${e.text}`).join("\n")
         : "—";
 
       const corr = data.correlations || [];
@@ -768,7 +770,7 @@
           search_keywords: t?.search_keywords || [],
           min_duration_ms: minMs,
           filter_by_keywords: false,
-          middleware_only: true,
+          http_access_only: false,
         }),
       });
       const data = await res.json();

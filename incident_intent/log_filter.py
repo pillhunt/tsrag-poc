@@ -8,7 +8,7 @@ import os
 from collections import defaultdict
 from pathlib import Path
 
-from incident_intent.log_discovery import discover_log_files, is_priority_log
+from incident_intent.log_discovery import discover_log_files, is_priority_log, log_kind_for_path
 from incident_intent.path_resolve import (
     is_docker_runtime,
     path_hints_for_missing,
@@ -63,6 +63,7 @@ def _collect_log_files(
                 relative_path=rel,
                 size_bytes=size,
                 priority=is_priority_log(path.name),
+                log_kind=log_kind_for_path(rel),
             )
         )
     return log_files
