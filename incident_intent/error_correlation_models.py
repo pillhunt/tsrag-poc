@@ -11,10 +11,30 @@ ErrorCategory = Literal[
     "sql_deadlock",
     "sql_pk_duplicate",
     "sql_timeout",
+    "sql_connection",
+    "pg_deadlock",
+    "pg_unique_violation",
+    "pg_statement_timeout",
+    "pg_connection",
+    "nginx_upstream_timeout",
+    "nginx_connect_refused",
+    "nginx_ssl",
+    "iis_500",
+    "iis_timeout",
+    "iis_502_503",
     "concurrency",
     "connection",
     "generic_error",
     "other",
+]
+
+ErrorEngine = Literal[
+    "mssql",
+    "postgres",
+    "nginx",
+    "iis",
+    "dotnet_app",
+    "unknown",
 ]
 
 
@@ -29,10 +49,13 @@ class CorrelateErrorsRequest(FilterLogsRequest):
     )
     search_keywords: list[str] = Field(default_factory=list)
     filter_by_keywords: bool = False
-    global_log_only: bool = True
-    include_other_error_logs: bool = Field(
+    global_log_only: bool = Field(
         default=False,
-        description="Искать Exception и в не-global файлах среза",
+        description="Если true — только файлы с global.log в пути",
+    )
+    include_other_error_logs: bool = Field(
+        default=True,
+        description="Устарело: при global_log_only=false игнорируется",
     )
     correlation_window_sec: int = Field(default=90, ge=0, le=3600)
     max_errors_returned: int = Field(default=100, ge=1, le=500)
@@ -45,6 +68,7 @@ class ErrorCategoryCount(BaseModel):
 
 class ErrorInWindow(BaseModel):
     timestamp: str | None
+    error_engine: ErrorEngine = "unknown"
     category: ErrorCategory
     file: str
     line_number: int
@@ -57,12 +81,18 @@ class SlowRequestCorrelation(BaseModel):
     related_errors: list[ErrorInWindow] = Field(default_factory=list)
 
 
+class ErrorEngineCount(BaseModel):
+    engine: ErrorEngine
+    count: int
+
+
 class CorrelateErrorsResponse(BaseModel):
     status: Literal["ok", "error"]
     correlation_window_sec: int = 90
-    global_log_only: bool = True
+    global_log_only: bool = False
     errors_in_window: list[ErrorInWindow] = Field(default_factory=list)
     by_category: list[ErrorCategoryCount] = Field(default_factory=list)
+    by_engine: list[ErrorEngineCount] = Field(default_factory=list)
     correlations: list[SlowRequestCorrelation] = Field(default_factory=list)
     unparsed_timestamp_count: int = 0
     conclusions: list[str] = Field(default_factory=list)

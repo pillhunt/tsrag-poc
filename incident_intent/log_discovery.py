@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
-_LOG_SUFFIXES = (".log", ".txt")
+from incident_intent.error_classifier import infer_log_kind
+
+_LOG_SUFFIXES = (".log", ".txt", ".out", ".jsonl")
 _LOG_ROLLING_SUFFIXES = (".log.1", ".log.2", ".log.gz", ".log.zip")
 
 _SKIP_DIR_NAMES = frozenset(
@@ -28,21 +31,50 @@ _PRIORITY_LOG_NAMES = frozenset(
         "global.log",
         "WorkflowTrace.log",
         "ClientLogs.log",
+        "access.log",
+        "error.log",
+        "ERRORLOG",
     }
 )
+
+_RE_IIS = re.compile(r"^u_ex\d+\.log$", re.IGNORECASE)
+_RE_PG = re.compile(r"^postgresql-\d{4}-\d{2}-\d{2}.*\.log$", re.IGNORECASE)
 
 
 def is_log_filename(name: str) -> bool:
     lower = name.lower()
     if lower.endswith(_LOG_SUFFIXES):
         return True
-    return any(lower.endswith(suffix) for suffix in _LOG_ROLLING_SUFFIXES)
+    if any(lower.endswith(suffix) for suffix in _LOG_ROLLING_SUFFIXES):
+        return True
+    if lower == "errorlog" or lower.startswith("errorlog."):
+        return True
+    if _RE_IIS.match(name):
+        return True
+    if _RE_PG.match(name):
+        return True
+    if lower.startswith("httperr") and lower.endswith(".log"):
+        return True
+    if lower.startswith("sqlagent") and lower.endswith(".out"):
+        return True
+    return False
 
 
 def is_priority_log(name: str) -> bool:
-    return name in _PRIORITY_LOG_NAMES or (
-        "RequestLogging" in name and name.lower().endswith(".log")
-    )
+    if name in _PRIORITY_LOG_NAMES:
+        return True
+    lower = name.lower()
+    if "requestlogging" in lower and lower.endswith(".log"):
+        return True
+    if lower in ("access.log", "error.log", "errorlog"):
+        return True
+    if _RE_IIS.match(name) or _RE_PG.match(name):
+        return True
+    return False
+
+
+def log_kind_for_path(relative_path: str) -> str:
+    return infer_log_kind(relative_path)
 
 
 def _sort_key(path: Path) -> tuple:

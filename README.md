@@ -6,9 +6,10 @@
 - **Шаги 1–2:** срез логов по времени → `time_window_lines` (все строки окна, с лимитом).
 - **Шаг 3–4:** поиск **только в `time_window_lines`** из шагов 1–2 (повторного чтения логов с диска нет).
 - **Шаг 3:** `search_keywords` по срезу.
-- **Шаг 4:** долгие HTTP в строках middleware из того же среза.
-- **Шаг 5:** ошибки в `global.log` из среза + привязка по времени к долгим запросам (шаг 4).
-- **Шаг 6:** Ollama → итоговое заключение по фактам шагов 0–5 (`conclusion_markdown`, **confidence** по логам, `supported_by`, `not_proven`, `recommended_actions`). HITL не реализован.
+- **Шаг 4:** долгие HTTP/access-запросы (CaseOne middleware, nginx, IIS и др.) в строках среза.
+- **Шаг 5:** ошибки во **всех файлах среза** + привязка по времени к долгим запросам (шаг 4).
+- **Шаг 0:** таблица намерений (диалог + Ollama).
+- **Шаги 1–8:** одна кнопка «Обработать инцидент» — срез, keywords, slow, errors, WorkflowTrace, ClientLogs, caseone, заключение LLM. Журнал шагов внизу страницы. HITL не реализован.
 
 ## Что делает скрипт (алгоритм шага 0)
 
@@ -44,9 +45,9 @@ python -m uvicorn app:app --host 0.0.0.0 --port 8090
 
 ```json
 {
-  "incident_description": "23.04 с 8 до 10:30 вечера при сохранении новой кнопки…",
-  "logs_path": "D:\\RAG\\REN-MSKCASPRO01_2026-04-23",
-  "caseone_path": "D:\\RAG\\tsrag\\temp\\uploads\\caseone"
+  "incident_description": "15.05 с 14:00 до 15:30 отчёт долго формировался, в конце таймаут",
+  "logs_path": "D:\\RAG\\poc\\temp\\incidents\\example-id\\logs",
+  "caseone_path": "D:\\RAG\\poc\\temp\\caseone"
 }
 ```
 
@@ -56,9 +57,9 @@ python -m uvicorn app:app --host 0.0.0.0 --port 8090
 
 ```json
 {
-  "logs_path": "D:\\RAG\\REN-MSKCASPRO01_2026-04-23",
-  "log_search_patterns": ["2026-04-23 20:", "2026-04-23 21:", "2026-04-23 22:"],
-  "caseone_path": "D:\\RAG\\tsrag\\temp\\uploads\\caseone",
+  "logs_path": "D:\\RAG\\poc\\temp\\incidents\\example-id\\logs",
+  "log_search_patterns": ["2026-05-15 14:", "2026-05-15 15:"],
+  "caseone_path": "D:\\RAG\\poc\\temp\\caseone",
   "recursive": true,
   "max_depth": null
 }
@@ -76,37 +77,39 @@ python -m uvicorn app:app --host 0.0.0.0 --port 8090
 
 ```json
 {
-  "logs_path": "D:\\RAG\\REN-MSKCASPRO01_2026-04-23",
-  "log_search_patterns": ["2026-04-23 20:"],
+  "logs_path": "D:\\RAG\\poc\\temp\\incidents\\example-id\\logs",
+  "log_search_patterns": ["2026-05-15 14:"],
   "time_window_lines": [
-    { "file": "case1.renins.com/global.log", "line_number": 42, "text": "…" }
+    { "file": "host.example.com/global.log", "line_number": 42, "text": "…" }
   ],
-  "search_keywords": ["сохран", "button", "PutProjectType"]
+  "search_keywords": ["отчёт", "Timeout", "/api/reports"]
 }
 ```
 
-Шаг 4 дополнительно: `min_duration_ms`, `top_n`, `middleware_only` (только строки middleware **внутри среза**).
+Шаг 4 дополнительно: `min_duration_ms`, `top_n`, `http_access_only` (только строки, распознанные как HTTP/access).
 
 ### `POST /api/correlate-errors`
 
-Шаг 5: ошибки в срезе + корреляция с `slow_requests` (±`correlation_window_sec`, по умолчанию 90 с).
+Шаг 5: ошибки во **всех файлах** среза + корреляция с `slow_requests` (±`correlation_window_sec`, по умолчанию 90 с).
 
 ```json
 {
-  "logs_path": "D:\\RAG\\REN-MSKCASPRO01_2026-04-23",
-  "log_search_patterns": ["2026-04-23 20:"],
+  "logs_path": "D:\\RAG\\poc\\temp\\incidents\\example-id\\logs",
+  "log_search_patterns": ["2026-05-15 14:"],
   "time_window_lines": [],
   "slow_requests": [],
   "correlation_window_sec": 90,
-  "global_log_only": true
+  "global_log_only": false
 }
 ```
 
-Категории: `sql_deadlock`, `sql_pk_duplicate`, `sql_timeout`, `concurrency`, `connection`, `generic_error`.
+Категории задаются в `incident_intent/error_rules.yaml` (MSSQL, PostgreSQL, nginx, IIS, .NET app + `generic_error`).
 
-### `POST /api/incident-conclusion`
+### `POST /api/incident/process`
 
-Шаг 6: LLM формирует заключение по JSON-досье из результатов предыдущих шагов (без повторного чтения логов).
+Шаги 1–8 последовательно на сервере. Тело: `intent_table`, `logs_path`, `caseone_path`, опционально `incident_id`. Ответ: `steps[]` (журнал), результаты шагов, `filter_summary` (без тяжёлого среза в JSON).
+
+Отдельные endpoint'ы (`/api/filter-logs`, …) сохранены для отладки.
 
 ```json
 {
@@ -116,7 +119,7 @@ python -m uvicorn app:app --host 0.0.0.0 --port 8090
     "time_window_line_count": 800,
     "time_window_truncated": false,
     "files_in_window": ["case1.renins.com/global.log"],
-    "patterns_used": ["2026-04-23 20:"]
+    "patterns_used": ["2026-05-15 14:"]
   },
   "symptom_search": null,
   "slow_requests": null,

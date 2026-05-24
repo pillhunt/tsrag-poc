@@ -25,9 +25,8 @@
     }
     .wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
     h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.25rem; }
-    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
-    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.35rem; }
-    textarea, input {
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 1rem; }
+    textarea, input[type="text"], input[type="file"] {
       width: 100%;
       background: var(--panel);
       border: 1px solid var(--border);
@@ -36,11 +35,7 @@
       padding: 0.65rem 0.75rem;
       font: inherit;
     }
-    textarea { min-height: 140px; resize: vertical; }
-    .row { display: grid; gap: 1rem; margin-bottom: 1rem; }
-    @media (min-width: 640px) {
-      .row.two { grid-template-columns: 1fr 1fr; }
-    }
+    textarea { min-height: 72px; resize: vertical; }
     button {
       background: var(--accent);
       color: #fff;
@@ -56,9 +51,8 @@
       background: transparent;
       border: 1px solid var(--border);
       color: var(--text);
-      margin-left: 0.5rem;
     }
-    .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 1rem; }
     .meta { font-size: 0.8rem; color: var(--muted); margin-top: 0.75rem; }
     .panel {
       margin-top: 1.5rem;
@@ -68,6 +62,34 @@
       padding: 1rem 1.25rem;
     }
     .panel h2 { font-size: 1rem; margin: 0 0 0.75rem; }
+    .chat-panel { display: flex; flex-direction: column; gap: 0.75rem; }
+    .dialog {
+      min-height: 200px;
+      max-height: 360px;
+      overflow-y: auto;
+      background: #0b1018;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem;
+    }
+    .msg { margin-bottom: 0.65rem; padding: 0.5rem 0.65rem; border-radius: 8px; font-size: 0.92rem; }
+    .msg.user { background: rgba(61, 139, 253, 0.15); margin-left: 1.5rem; }
+    .msg.assistant { background: rgba(62, 207, 142, 0.1); margin-right: 1.5rem; }
+    .msg.system { background: rgba(154, 168, 188, 0.12); font-size: 0.85rem; color: var(--muted); }
+    .msg.loading { color: var(--muted); font-style: italic; }
+    .msg-role { font-size: 0.72rem; color: var(--muted); margin-bottom: 0.2rem; text-transform: uppercase; }
+    .composer { display: flex; flex-direction: column; gap: 0.5rem; }
+    .composer-row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-end; }
+    .composer-row textarea { flex: 1; min-width: 200px; }
+    .warn-banner {
+      background: rgba(232, 168, 56, 0.15);
+      border: 1px solid rgba(232, 168, 56, 0.35);
+      color: var(--warn);
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      margin-top: 0.75rem;
+    }
     table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     th, td { text-align: left; padding: 0.5rem 0.4rem; border-bottom: 1px solid var(--border); vertical-align: top; }
     th { color: var(--muted); font-weight: 500; width: 38%; }
@@ -89,67 +111,70 @@
       font-size: 0.8rem;
     }
     .error { color: #ff7b7b; }
+    .step-status {
+      font-size: 0.88rem;
+      margin-top: 0.65rem;
+      min-height: 1.25rem;
+    }
+    .step-status.loading { color: var(--muted); font-style: italic; }
+    .step-status.error { color: #ff7b7b; }
+    .step-status.ok { color: var(--ok); }
+    .step-status.hint { color: var(--muted); }
+    .pipeline-log-panel {
+      margin-top: 2rem;
+      border-top: 2px solid var(--border);
+      padding-top: 1rem;
+    }
+    #pipelineLog {
+      width: 100%;
+      min-height: 200px;
+      max-height: 280px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.82rem;
+      line-height: 1.45;
+      resize: vertical;
+      background: #0b1018;
+    }
+    button.primary-process {
+      background: var(--ok);
+      font-size: 1rem;
+      padding: 0.75rem 1.5rem;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Разбор инцидента (PoC)</h1>
     <p class="sub">
-      Шаг 0: таблица намерений (Ollama <span id="modelName">…</span>).
-      Шаги 1–5: факты из логов. Шаг 6: итоговое заключение (LLM) и уверенность в выводе.
+      Диалог → таблица намерений (Ollama <span id="modelName">…</span>).
+      Логи — из вложений в <code>temp/incidents/&lt;id&gt;</code>, caseone — <code>temp/caseone</code>.
     </p>
 
-    <form id="form">
-      <div class="row">
-        <div>
-          <label for="description">Описание инцидента *</label>
-          <textarea id="description" name="description" required
-            placeholder="Пример: 23.04 с 8 до 10:30 вечера при сохранении новой кнопки — 20–30 минут, не с первой попытки…"></textarea>
-        </div>
-      </div>
-      <div class="row two">
-        <div>
-          <label for="logsPath">Путь к папке логов (необязательно)</label>
-          <input id="logsPath" type="text" placeholder="D:\RAG\REN-MSKCASPRO01_2026-04-23" />
-        </div>
-        <div>
-          <label for="caseonePath">Путь к caseone (необязательно)</label>
-          <input id="caseonePath" type="text" placeholder="D:\RAG\tsrag\temp\uploads\caseone" />
+    <div class="panel chat-panel">
+      <h2>Диалог</h2>
+      <div id="dialog" class="dialog"></div>
+      <div id="timeWarn" class="warn-banner" hidden></div>
+      <div class="composer">
+        <textarea id="messageInput" placeholder="Опишите инцидент: дата, время, симптом… Можно прикрепить логи или zip."></textarea>
+        <div class="composer-row">
+          <input type="file" id="fileInput" multiple accept=".log,.txt,.zip,.gz" />
+          <button type="button" id="sendBtn">Отправить</button>
         </div>
       </div>
       <div class="actions">
-        <button type="submit" id="submitBtn">Шаг 0 — таблица намерений</button>
-        <button type="button" class="secondary" id="filterBtn" disabled title="Сначала постройте таблицу и укажите путь к логам">
-          Шаги 1–2 — сузить логи
-        </button>
-        <button type="button" class="secondary" id="symptomBtn" disabled title="Сначала шаги 1–2, затем search_keywords">
-          Шаг 3 — ключевые слова
-        </button>
-        <button type="button" class="secondary" id="slowBtn" disabled title="Сначала шаги 1–2 (срез по времени)">
-          Шаг 4 — долгие запросы
-        </button>
-        <button type="button" class="secondary" id="errorBtn" disabled title="Сначала шаги 1–2 (срез по времени)">
-          Шаг 5 — ошибки
-        </button>
-        <button type="button" class="secondary" id="conclusionBtn" disabled title="Сначала шаги 1–2 (срез по времени)">
-          Шаг 6 — вывод (LLM)
-        </button>
+        <button type="button" class="secondary" id="submitBtn" disabled>Шаг 0 — таблица намерений</button>
+        <button type="button" class="primary-process" id="processBtn" disabled>Обработать инцидент</button>
       </div>
+      <p id="stepStatus" class="step-status hint">Сначала отправьте сообщение в диалоге.</p>
       <p class="meta" id="healthMeta"></p>
-    </form>
+    </div>
 
     <div id="result" class="panel" hidden>
-      <h2>Результат <span id="statusBadge" class="badge"></span></h2>
-      <div id="questionsBlock" hidden>
-        <p><strong>Нужны уточнения:</strong></p>
-        <ul id="questionsList"></ul>
-      </div>
-      <table id="intentTable">
-        <tbody></tbody>
-      </table>
+      <h2>Таблица намерений <span id="statusBadge" class="badge"></span></h2>
+      <table id="intentTable"><tbody></tbody></table>
       <p style="margin-top:1rem"><strong>Паттерны времени (grep):</strong></p>
       <ul id="patternsList"></ul>
-      <p style="margin-top:1rem"><strong>Ключевые слова для логов (search_keywords):</strong></p>
+      <p style="margin-top:1rem"><strong>Ключевые слова (search_keywords):</strong></p>
       <ul id="keywordsList"></ul>
       <details style="margin-top:1rem">
         <summary>Сырой JSON модели</summary>
@@ -157,683 +182,652 @@
       </details>
     </div>
 
-    <div id="slowResult" class="panel" hidden>
-      <h2>Шаг 4 — долгие запросы <span id="slowBadge" class="badge"></span></h2>
-      <p id="slowSummary" class="meta"></p>
-      <p><strong>Выводы:</strong></p>
-      <ul id="slowConclusions"></ul>
-      <p style="margin-top:1rem"><strong>Топ запросов:</strong></p>
-      <table id="slowTable">
-        <thead>
-          <tr><th>Время</th><th>Метод</th><th>API</th><th>мин</th><th>мс</th><th>Файл</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <p style="margin-top:1rem"><strong>Агрегат по API:</strong></p>
-      <table id="slowByPathTable">
-        <thead><tr><th>API</th><th>шт</th><th>max мин</th><th>avg мс</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <div id="slowErrorsBlock" hidden>
-        <p><strong>Замечания:</strong></p>
-        <ul id="slowErrorsList"></ul>
-      </div>
-    </div>
-
-    <div id="conclusionResult" class="panel" hidden>
-      <h2>Шаг 6 — заключение <span id="conclusionBadge" class="badge"></span>
-        <span id="conclusionConfidence" class="badge" style="margin-left:0.35rem"></span>
-      </h2>
-      <p id="conclusionReason" class="meta"></p>
-      <div id="conclusionMarkdown" style="white-space:pre-wrap;line-height:1.55;margin:1rem 0"></div>
-      <p><strong>На чём основано:</strong></p>
-      <ul id="conclusionSupported"></ul>
-      <p><strong>Не подтверждено логами:</strong></p>
-      <ul id="conclusionNotProven"></ul>
-      <p><strong>Рекомендации:</strong></p>
-      <ul id="conclusionActions"></ul>
-      <details style="margin-top:1rem">
-        <summary>Сырой JSON модели</summary>
-        <pre id="conclusionRawJson"></pre>
-      </details>
-      <div id="conclusionErrorsBlock" hidden>
-        <p><strong>Замечания:</strong></p>
-        <ul id="conclusionErrorsList"></ul>
-      </div>
-    </div>
-
-    <div id="errorResult" class="panel" hidden>
-      <h2>Шаг 5 — ошибки <span id="errorBadge" class="badge"></span></h2>
-      <p id="errorSummary" class="meta"></p>
-      <p><strong>Выводы:</strong></p>
-      <ul id="errorConclusions"></ul>
-      <p style="margin-top:1rem"><strong>По категориям:</strong></p>
-      <ul id="errorCategories"></ul>
-      <p style="margin-top:1rem"><strong>Ошибки в срезе (global):</strong></p>
-      <pre id="errorList" style="max-height:200px"></pre>
-      <p style="margin-top:1rem"><strong>Привязка к долгим запросам (±окно):</strong></p>
-      <pre id="errorCorrelations" style="max-height:220px"></pre>
-      <div id="errorErrorsBlock" hidden>
-        <p><strong>Замечания:</strong></p>
-        <ul id="errorErrorsList"></ul>
-      </div>
-    </div>
-
-    <div id="symptomResult" class="panel" hidden>
-      <h2>Шаг 3 — поиск по ключевым словам <span id="symptomBadge" class="badge"></span></h2>
-      <p id="symptomSummary" class="meta"></p>
-      <p><strong>Использованные search_keywords:</strong></p>
-      <ul id="symptomKeywordsUsed"></ul>
-      <p><strong>Выводы:</strong></p>
-      <ul id="symptomConclusions"></ul>
-      <p style="margin-top:1rem"><strong>По файлам:</strong></p>
-      <table id="symptomFileTable">
-        <thead><tr><th>Файл</th><th>Строк</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <p style="margin-top:1rem"><strong>Примеры строк:</strong></p>
-      <pre id="symptomSamples" style="max-height:280px"></pre>
-      <div id="symptomErrorsBlock" hidden>
-        <p><strong>Замечания:</strong></p>
-        <ul id="symptomErrorsList"></ul>
-      </div>
-    </div>
-
     <div id="filterResult" class="panel" hidden>
-      <h2>Сужение логов <span id="filterBadge" class="badge"></span></h2>
+      <h2>Шаг 1 — сужение логов <span id="filterBadge" class="badge"></span></h2>
       <p id="filterSummary" class="meta"></p>
-      <div id="filterErrorsBlock" hidden>
-        <p><strong>Замечания:</strong></p>
-        <ul id="filterErrorsList"></ul>
-      </div>
+      <p id="filterFormatSummary" class="meta hint"></p>
+      <div id="filterErrorsBlock" hidden><p><strong>Замечания:</strong></p><ul id="filterErrorsList"></ul></div>
       <p><strong>Файлы логов (<span id="logFileCount">0</span>):</strong></p>
       <ul id="logFilesList" style="font-size:0.85rem;max-height:120px;overflow:auto"></ul>
-      <p style="margin-top:1rem"><strong>Совпадения по файлам:</strong></p>
-      <table id="matchTable">
-        <thead><tr><th>Файл</th><th>Строк</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <p style="margin-top:1rem"><strong>Примеры строк:</strong></p>
+      <table id="matchTable"><thead><tr><th>Файл</th><th>Строк</th><th></th></tr></thead><tbody></tbody></table>
       <pre id="sampleLines" style="max-height:320px"></pre>
     </div>
 
+    <div id="symptomResult" class="panel" hidden>
+      <h2>Шаг 2 — ключевые слова <span id="symptomBadge" class="badge"></span></h2>
+      <p id="symptomSummary" class="meta"></p>
+      <ul id="symptomKeywordsUsed"></ul>
+      <ul id="symptomConclusions"></ul>
+      <table id="symptomFileTable"><thead><tr><th>Файл</th><th>Строк</th></tr></thead><tbody></tbody></table>
+      <pre id="symptomSamples" style="max-height:280px"></pre>
+    </div>
+
+    <div id="slowResult" class="panel" hidden>
+      <h2>Шаг 3 — долгие запросы <span id="slowBadge" class="badge"></span></h2>
+      <p id="slowSummary" class="meta"></p>
+      <ul id="slowConclusions"></ul>
+      <table id="slowTable"><thead><tr><th>Время</th><th>Метод</th><th>API</th><th>мин</th><th>мс</th><th>Формат</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="errorResult" class="panel" hidden>
+      <h2>Шаг 4 — ошибки <span id="errorBadge" class="badge"></span></h2>
+      <p id="errorSummary" class="meta"></p>
+      <ul id="errorConclusions"></ul>
+      <pre id="errorList" style="max-height:200px"></pre>
+      <pre id="errorCorrelations" style="max-height:220px"></pre>
+    </div>
+
+    <div id="contextResult" class="panel" hidden>
+      <h2>Шаги 5–7 — контекст <span id="contextBadge" class="badge"></span></h2>
+      <p id="contextSummary" class="meta"></p>
+      <h3 style="font-size:0.95rem;margin:1rem 0 0.35rem">Шаг 5 — WorkflowTrace</h3>
+      <ul id="workflowConclusions"></ul>
+      <table id="workflowPairsTable"><thead><tr><th>Операция</th><th>Начало</th><th>Конец</th><th>сек</th></tr></thead><tbody></tbody></table>
+      <h3 style="font-size:0.95rem;margin:1rem 0 0.35rem">Шаг 6 — ClientLogs</h3>
+      <ul id="clientConclusions"></ul>
+      <pre id="clientSamples" style="max-height:160px"></pre>
+      <h3 style="font-size:0.95rem;margin:1rem 0 0.35rem">Шаг 7 — caseone config</h3>
+      <ul id="caseoneConclusions"></ul>
+      <pre id="caseoneSnippets" style="max-height:180px"></pre>
+    </div>
+
+    <div id="conclusionResult" class="panel" hidden>
+      <h2>Шаг 8 — заключение <span id="conclusionBadge" class="badge"></span> <span id="conclusionConfidence" class="badge"></span></h2>
+      <p id="conclusionReason" class="meta"></p>
+      <div id="conclusionMarkdown" style="white-space:pre-wrap"></div>
+      <ul id="conclusionSupported"></ul>
+      <ul id="conclusionNotProven"></ul>
+      <ul id="conclusionActions"></ul>
+      <pre id="conclusionRawJson"></pre>
+    </div>
+
     <p id="error" class="error" hidden></p>
+
+    <div class="panel pipeline-log-panel">
+      <h2>Ход обработки</h2>
+      <textarea id="pipelineLog" readonly placeholder="Здесь появится журнал шагов 1–8 после нажатия «Обработать инцидент»."></textarea>
+    </div>
   </div>
 
   <script>
-    const form = document.getElementById("form");
-    const submitBtn = document.getElementById("submitBtn");
-    const result = document.getElementById("result");
+    const dialogEl = document.getElementById("dialog");
+    const messageInput = document.getElementById("messageInput");
+    const fileInput = document.getElementById("fileInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const timeWarn = document.getElementById("timeWarn");
     const errorEl = document.getElementById("error");
-    const tbody = document.querySelector("#intentTable tbody");
-    const patternsList = document.getElementById("patternsList");
-    const keywordsList = document.getElementById("keywordsList");
-    const rawJson = document.getElementById("rawJson");
-    const statusBadge = document.getElementById("statusBadge");
-    const questionsBlock = document.getElementById("questionsBlock");
-    const questionsList = document.getElementById("questionsList");
-    const healthMeta = document.getElementById("healthMeta");
+    const stepStatusEl = document.getElementById("stepStatus");
     const modelName = document.getElementById("modelName");
-    const filterBtn = document.getElementById("filterBtn");
-    const filterResult = document.getElementById("filterResult");
-    const filterBadge = document.getElementById("filterBadge");
-    const filterSummary = document.getElementById("filterSummary");
-    const filterErrorsBlock = document.getElementById("filterErrorsBlock");
-    const filterErrorsList = document.getElementById("filterErrorsList");
-    const logFileCount = document.getElementById("logFileCount");
-    const logFilesList = document.getElementById("logFilesList");
-    const matchTableBody = document.querySelector("#matchTable tbody");
-    const sampleLines = document.getElementById("sampleLines");
-    const symptomBtn = document.getElementById("symptomBtn");
-    const symptomResult = document.getElementById("symptomResult");
-    const symptomBadge = document.getElementById("symptomBadge");
-    const symptomSummary = document.getElementById("symptomSummary");
-    const symptomConclusions = document.getElementById("symptomConclusions");
-    const symptomKeywordsUsed = document.getElementById("symptomKeywordsUsed");
-    const symptomFileTableBody = document.querySelector("#symptomFileTable tbody");
-    const symptomSamples = document.getElementById("symptomSamples");
-    const symptomErrorsBlock = document.getElementById("symptomErrorsBlock");
-    const symptomErrorsList = document.getElementById("symptomErrorsList");
-    const slowBtn = document.getElementById("slowBtn");
-    const slowResult = document.getElementById("slowResult");
-    const slowBadge = document.getElementById("slowBadge");
-    const slowSummary = document.getElementById("slowSummary");
-    const slowConclusions = document.getElementById("slowConclusions");
-    const slowTableBody = document.querySelector("#slowTable tbody");
-    const slowByPathTableBody = document.querySelector("#slowByPathTable tbody");
-    const slowErrorsBlock = document.getElementById("slowErrorsBlock");
-    const slowErrorsList = document.getElementById("slowErrorsList");
-    const errorBtn = document.getElementById("errorBtn");
-    const errorResult = document.getElementById("errorResult");
-    const errorBadge = document.getElementById("errorBadge");
-    const errorSummary = document.getElementById("errorSummary");
-    const errorConclusions = document.getElementById("errorConclusions");
-    const errorCategories = document.getElementById("errorCategories");
-    const errorList = document.getElementById("errorList");
-    const errorCorrelations = document.getElementById("errorCorrelations");
-    const errorErrorsBlock = document.getElementById("errorErrorsBlock");
-    const errorErrorsList = document.getElementById("errorErrorsList");
+    const healthMeta = document.getElementById("healthMeta");
 
-    const errorCategoryLabels = {
-      sql_deadlock: "deadlock SQL",
-      sql_pk_duplicate: "дубликат PK",
-      sql_timeout: "таймаут SQL",
-      concurrency: "конфликт версии",
-      connection: "обрыв соединения",
-      generic_error: "исключение",
-      other: "прочее",
-    };
-
+    let incidentId = null;
+    let dialogState = null;
     let lastIntent = null;
     let lastTimeWindow = [];
+    let lastSlowTimeWindow = [];
     let lastFilterSummary = null;
     let lastSymptomData = null;
     let lastSlowData = null;
     let lastErrorData = null;
+    let lastWorkflowTrace = null;
+    let lastClientLogs = null;
+    let lastCaseoneConfig = null;
+    let pendingLoading = false;
+    let stepRunning = false;
 
-    const conclusionBtn = document.getElementById("conclusionBtn");
-    const conclusionResult = document.getElementById("conclusionResult");
-    const conclusionBadge = document.getElementById("conclusionBadge");
-    const conclusionConfidence = document.getElementById("conclusionConfidence");
-    const conclusionReason = document.getElementById("conclusionReason");
-    const conclusionMarkdown = document.getElementById("conclusionMarkdown");
-    const conclusionSupported = document.getElementById("conclusionSupported");
-    const conclusionNotProven = document.getElementById("conclusionNotProven");
-    const conclusionActions = document.getElementById("conclusionActions");
-    const conclusionRawJson = document.getElementById("conclusionRawJson");
-    const conclusionErrorsBlock = document.getElementById("conclusionErrorsBlock");
-    const conclusionErrorsList = document.getElementById("conclusionErrorsList");
+    const submitBtn = document.getElementById("submitBtn");
+    const processBtn = document.getElementById("processBtn");
+    const pipelineLogEl = document.getElementById("pipelineLog");
 
-    function updateActionButtons() {
-      const logsPath = document.getElementById("logsPath").value.trim();
-      const patterns = lastIntent?.table?.log_search_patterns || [];
-      const keywords = lastIntent?.table?.search_keywords || [];
-      const hasSlice = lastTimeWindow.length > 0;
-      const ready = Boolean(logsPath && patterns.length);
-      filterBtn.disabled = !ready;
-      symptomBtn.disabled = !ready || keywords.length === 0 || !hasSlice;
-      slowBtn.disabled = !ready || !hasSlice;
-      errorBtn.disabled = !ready || !hasSlice;
-      conclusionBtn.disabled = !ready || !hasSlice || !lastIntent?.table;
+    function roleLabel(role) {
+      if (role === "user") return "Вы";
+      if (role === "assistant") return "Система";
+      return "Сервис";
+    }
+
+    function renderDialog() {
+      dialogEl.innerHTML = "";
+      (dialogState?.messages || []).forEach(m => {
+        const div = document.createElement("div");
+        div.className = "msg " + m.role;
+        div.innerHTML = `<div class="msg-role">${roleLabel(m.role)}</div><div>${escapeHtml(m.content)}</div>`;
+        dialogEl.appendChild(div);
+      });
+      if (pendingLoading) {
+        const load = document.createElement("div");
+        load.className = "msg loading";
+        load.textContent = "Ожидание ответа от системы…";
+        dialogEl.appendChild(load);
+      }
+      dialogEl.scrollTop = dialogEl.scrollHeight;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    }
+
+    function syncIntentFromDialog() {
+      lastIntent = dialogState?.intent || null;
+      const t = lastIntent?.table;
+      const complete = dialogState?.intent_status === "complete";
+      document.getElementById("result").hidden = !lastIntent?.table;
+      if (!t) return;
+
+      const statusBadge = document.getElementById("statusBadge");
+      statusBadge.textContent = complete ? "готово" : "нужны уточнения";
+      statusBadge.className = "badge " + (complete ? "complete" : "needs");
+
+      const tbody = document.querySelector("#intentTable tbody");
+      tbody.innerHTML = [
+        fieldRow("Дата", t.incident_date),
+        fieldRow("Начало", t.time_window_start),
+        fieldRow("Конец", t.time_window_end),
+        `<tr><th>Режим времени</th><td><code>${t.time_filter_mode || "time_window"}</code></td></tr>`,
+        `<tr><th>Симптомы</th><td>${(t.symptoms||[]).map(s=>`• ${escapeHtml(s)}`).join("<br>")||"—"}</td></tr>`,
+        `<tr><th>Цель</th><td>${escapeHtml(t.investigation_goal||"—")}</td></tr>`,
+        `<tr><th>Порог долгих HTTP</th><td>${t.min_slow_request_ms != null ? t.min_slow_request_ms + " мс" : "—"}</td></tr>`,
+        `<tr><th>Жалоба (мин)</th><td>${t.reported_duration_min_minutes ?? "—"} – ${t.reported_duration_max_minutes ?? "—"}</td></tr>`,
+      ].join("");
+      document.getElementById("patternsList").innerHTML = (t.log_search_patterns||[]).map(p=>`<li><code>${escapeHtml(p)}</code></li>`).join("")||"<li>—</li>";
+      document.getElementById("keywordsList").innerHTML = [
+        ...(t.search_keywords||[]).map(k=>`<li><code>${escapeHtml(k)}</code></li>`),
+        (t.slow_log_search_patterns||[]).length
+          ? `<li class="meta">Расширенное окно (шаги 4–5): ${(t.slow_log_search_patterns||[]).map(p=>`<code>${escapeHtml(p)}</code>`).join(", ")}</li>`
+          : "",
+      ].join("") || "<li>—</li>";
+      document.getElementById("rawJson").textContent = JSON.stringify(lastIntent.raw_llm || lastIntent, null, 2);
+
+      if (t.time_filter_mode === "full_corpus") {
+        timeWarn.hidden = false;
+        timeWarn.textContent = "Временной интервал не задан: шаги 1–2 используют все строки логов (до лимита). Вывод может быть некорректным.";
+      } else {
+        timeWarn.hidden = true;
+      }
+      updateActionButtons();
     }
 
     function fieldRow(label, field) {
       if (!field) return `<tr><th>${label}</th><td>—</td></tr>`;
-      const note = field.note ? `<br><small style="color:#9aa8bc">${field.note}</small>` : "";
-      return `<tr><th>${label}</th><td>${field.value ?? "—"} <small>(${field.source})</small>${note}</td></tr>`;
+      return `<tr><th>${label}</th><td>${field.value ?? "—"} <small>(${field.source})</small></td></tr>`;
+    }
+
+    function sessionPaths() {
+      return {
+        logs_path: dialogState?.logs_path || "",
+        caseone_path: dialogState?.caseone_path || "",
+      };
+    }
+
+    function setStepStatus(text, kind) {
+      stepStatusEl.textContent = text || "";
+      stepStatusEl.className = "step-status" + (kind ? " " + kind : "");
+    }
+
+    function showError(msg) {
+      errorEl.hidden = false;
+      errorEl.textContent = msg;
+      setStepStatus(msg, "error");
+    }
+
+    function clearError() {
+      errorEl.hidden = true;
+      errorEl.textContent = "";
+    }
+
+    function scrollToPanel(id) {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function stepBlockReason(btnId) {
+      if (btnId === "submitBtn") {
+        if (!incidentId) return "Сначала отправьте сообщение в диалоге.";
+        if (pendingLoading) return "Дождитесь ответа в диалоге.";
+        return "";
+      }
+      if (dialogState?.intent_status !== "complete") {
+        return "Шаг 0 не завершён — ответьте на уточняющий вопрос в диалоге.";
+      }
+      if (!lastIntent?.table) return "Сначала постройте таблицу намерений (шаг 0).";
+      if (!dialogState?.has_logs) return "Прикрепите логи или zip к инциденту.";
+      const t = lastIntent.table;
+      const fullCorpus = t.time_filter_mode === "full_corpus";
+      if (!fullCorpus && !(t.log_search_patterns || []).length) {
+        return "Нет паттернов времени в таблице намерений.";
+      }
+      return "";
+    }
+
+    function updateActionButtons() {
+      if (stepRunning) return;
+
+      const submitReason = stepBlockReason("submitBtn");
+      submitBtn.disabled = !!submitReason;
+      submitBtn.title = submitReason || "";
+
+      const processReason = stepBlockReason("processBtn");
+      processBtn.disabled = !!processReason;
+      processBtn.title = processReason || "";
+
+      if (!incidentId) {
+        setStepStatus("Сначала отправьте сообщение в диалоге.", "hint");
+      } else if (dialogState?.intent_status !== "complete") {
+        setStepStatus("Шаг 0: нужны уточнения — ответьте в диалоге.", "hint");
+      } else if (lastFilterSummary?.time_window_line_count > 0) {
+        setStepStatus(
+          `Обработка завершена: срез ${lastFilterSummary.time_window_line_count} строк.`,
+          "ok"
+        );
+      } else if (dialogState?.has_logs && lastIntent?.table) {
+        setStepStatus("Таблица готова. Нажмите «Обработать инцидент».", "hint");
+      } else if (processReason) {
+        setStepStatus(processReason, "hint");
+      }
+    }
+
+    function clearPipelineLog() {
+      pipelineLogEl.value = "";
+    }
+
+    function appendPipelineLog(title, lines, status) {
+      pipelineLogEl.value += `\n► ${title}\n`;
+      for (const line of lines || []) {
+        pipelineLogEl.value += `  ${line}\n`;
+      }
+      if (status === "error") pipelineLogEl.value += "  [ОШИБКА]\n";
+      if (status === "skipped") pipelineLogEl.value += "  [ПРОПУЩЕН]\n";
+      pipelineLogEl.scrollTop = pipelineLogEl.scrollHeight;
+    }
+
+    function renderPipelineSteps(steps) {
+      clearPipelineLog();
+      pipelineLogEl.value = "Запуск обработки инцидента…\n";
+      for (const s of steps || []) {
+        appendPipelineLog(s.title, s.summary_lines, s.status);
+      }
+    }
+
+    function renderContextFromPipeline(wt, cl, cc, fs) {
+      document.getElementById("contextResult").hidden = false;
+      const anyRan = (wt && wt.ran) || (cl && cl.ran) || (cc && cc.ran);
+      const badge = document.getElementById("contextBadge");
+      badge.textContent = anyRan ? "ok" : "—";
+      badge.className = "badge " + (anyRan ? "complete" : "needs");
+      const tw = fs?.time_window_line_count ?? 0;
+      document.getElementById("contextSummary").textContent =
+        `Срез: ${tw} строк · WorkflowTrace: ${wt?.ran ? wt.line_count : "—"} · ` +
+        `Client: ${cl?.ran ? cl.event_count : "—"} · caseone: ${cc?.ran ? cc.snippets?.length : "—"}`;
+
+      document.getElementById("workflowConclusions").innerHTML = (wt?.conclusions || [])
+        .map(s => `<li>${escapeHtml(s)}</li>`).join("");
+      document.querySelector("#workflowPairsTable tbody").innerHTML = (wt?.paired_operations || []).map(p =>
+        `<tr><td>${escapeHtml(p.label)}</td><td>${escapeHtml(p.begin_at||"—")}</td>` +
+        `<td>${escapeHtml(p.end_at||"—")}</td><td>${p.duration_sec != null ? p.duration_sec.toFixed(1) : "—"}</td></tr>`
+      ).join("");
+
+      document.getElementById("clientConclusions").innerHTML = (cl?.conclusions || [])
+        .map(s => `<li>${escapeHtml(s)}</li>`).join("");
+      document.getElementById("clientSamples").textContent = (cl?.sample_lines || [])
+        .map(e => `[${e.category}] ${e.source_file}:${e.line_number}\n${e.text}`).join("\n\n") || "—";
+
+      document.getElementById("caseoneConclusions").innerHTML = (cc?.conclusions || [])
+        .map(s => `<li>${escapeHtml(s)}</li>`).join("");
+      document.getElementById("caseoneSnippets").textContent = (cc?.snippets || [])
+        .map(s => `${s.file} :: ${s.key_path} = ${s.value}`).join("\n") || "—";
+    }
+
+    function applyPipelineResults(resp) {
+      if (resp.filter_summary) lastFilterSummary = resp.filter_summary;
+      if (resp.filter) renderFilterResult(resp.filter);
+      if (resp.symptom_search) {
+        lastSymptomData = resp.symptom_search;
+        renderSymptomResult(resp.symptom_search);
+      }
+      if (resp.slow_requests) {
+        lastSlowData = resp.slow_requests;
+        renderSlowResult(resp.slow_requests);
+      }
+      if (resp.error_correlation) {
+        lastErrorData = resp.error_correlation;
+        renderErrorResult(resp.error_correlation);
+      }
+      lastWorkflowTrace = resp.workflow_trace;
+      lastClientLogs = resp.client_logs;
+      lastCaseoneConfig = resp.caseone_config;
+      renderContextFromPipeline(
+        resp.workflow_trace,
+        resp.client_logs,
+        resp.caseone_config,
+        resp.filter_summary
+      );
+      if (resp.conclusion) renderConclusionResult(resp.conclusion);
+      renderPipelineSteps(resp.steps);
+      if (resp.errors?.length) {
+        pipelineLogEl.value += "\nЗамечания:\n" + resp.errors.map(e => `  • ${e}`).join("\n") + "\n";
+      }
+    }
+
+    async function runStep(btn, panelId, label, task) {
+      if (btn.disabled || stepRunning) return;
+      clearError();
+      stepRunning = true;
+      const btnId = btn.id;
+      const origLabel = btn.textContent;
+      btn.textContent = label + "…";
+      btn.disabled = true;
+      setStepStatus(label + "… (подождите)", "loading");
+
+      try {
+        await task();
+        setStepStatus(label + " — готово.", "ok");
+        if (panelId) scrollToPanel(panelId);
+      } catch (err) {
+        showError(err.message || String(err));
+      } finally {
+        stepRunning = false;
+        btn.textContent = origLabel;
+        updateActionButtons();
+      }
+    }
+
+    function renderFilterResult(data) {
+      document.getElementById("filterResult").hidden = false;
+      const badge = document.getElementById("filterBadge");
+      badge.textContent = data.status === "ok" ? "ok" : "error";
+      badge.className = "badge " + (data.status === "ok" ? "complete" : "needs");
+
+      const fs = lastFilterSummary;
+      const twLen = fs?.time_window_line_count ?? (data.time_window_lines || []).length;
+      const slowN = fs?.slow_time_window_line_count ?? (data.slow_time_window_lines || []).length;
+      const truncated = (fs?.time_window_truncated ?? data.time_window_truncated) ? " · срез обрезан" : "";
+      const slowTrunc = (fs?.slow_time_window_truncated ?? data.slow_time_window_truncated) ? " · расшир. обрезан" : "";
+      document.getElementById("filterSummary").textContent =
+        `Режим: ${data.time_filter_mode} · фильтр: ${data.time_filter_strategy || "auto"} · жалоба: ${twLen}/${data.total_matching_lines} строк` +
+        (slowN ? ` · расшир. окно (шаги 3–4): ${slowN}/${data.slow_time_window_total_count ?? slowN}${slowTrunc}` : "") +
+        truncated;
+
+      const fmtSummary = data.detected_format_summary || [];
+      document.getElementById("filterFormatSummary").textContent = fmtSummary.length
+        ? "Форматы времени в логах: " + fmtSummary.join(", ")
+        : "";
+
+      const sources = data.sources || {};
+      document.getElementById("logFileCount").textContent = sources.log_file_count ?? 0;
+
+      const logFiles = sources.log_files || [];
+      document.getElementById("logFilesList").innerHTML = logFiles.length
+        ? logFiles.map(f => {
+            const fmt = (sources.detected_timestamp_formats || {})[f.relative_path];
+            const fmtTag = fmt ? ` · ${escapeHtml(fmt)}` : "";
+            return `<li><code>${escapeHtml(f.relative_path)}</code>${f.priority ? " ★" : ""}${fmtTag} (${f.size_bytes} B)</li>`;
+          }).join("")
+        : "<li>—</li>";
+
+      const byFile = data.by_file || [];
+      document.querySelector("#matchTable tbody").innerHTML = byFile.length
+        ? byFile.map(f => `<tr><td><code>${escapeHtml(f.relative_path)}</code></td><td>${f.match_count}</td><td>${f.priority ? "★" : ""}</td></tr>`).join("")
+        : "<tr><td colspan=\"3\">Нет совпадений по паттернам времени</td></tr>";
+
+      const samples = data.sample_lines || [];
+      document.getElementById("sampleLines").textContent = samples.length
+        ? samples.map(s => `${s.file}:${s.line_number}  ${s.text}`).join("\n")
+        : "—";
+
+      const errors = [...(data.errors || []), ...(sources.errors || [])];
+      const errBlock = document.getElementById("filterErrorsBlock");
+      if (errors.length) {
+        errBlock.hidden = false;
+        document.getElementById("filterErrorsList").innerHTML = errors.map(e => `<li>${escapeHtml(e)}</li>`).join("");
+      } else {
+        errBlock.hidden = true;
+      }
+    }
+
+    function renderSymptomResult(data) {
+      document.getElementById("symptomResult").hidden = false;
+      const badge = document.getElementById("symptomBadge");
+      badge.textContent = data.status === "ok" ? "ok" : "error";
+      badge.className = "badge " + (data.status === "ok" ? "complete" : "needs");
+
+      document.getElementById("symptomSummary").textContent =
+        `Совпадений: ${data.total_matching_lines} · ключевых слов: ${(data.search_keywords_used||[]).length}`;
+
+      document.getElementById("symptomKeywordsUsed").innerHTML = (data.search_keywords_used||[]).length
+        ? (data.search_keywords_used||[]).map(k => `<li><code>${escapeHtml(k)}</code></li>`).join("")
+        : "<li>—</li>";
+
+      document.getElementById("symptomConclusions").innerHTML = (data.conclusions||[]).length
+        ? (data.conclusions||[]).map(c => `<li>${escapeHtml(c)}</li>`).join("")
+        : "";
+
+      const byFile = data.by_file || [];
+      document.querySelector("#symptomFileTable tbody").innerHTML = byFile.length
+        ? byFile.map(f => `<tr><td><code>${escapeHtml(f.relative_path)}</code></td><td>${f.match_count}</td></tr>`).join("")
+        : "<tr><td colspan=\"2\">Нет совпадений</td></tr>";
+
+      const samples = data.sample_lines || [];
+      document.getElementById("symptomSamples").textContent = samples.length
+        ? samples.map(s => `${s.file}:${s.line_number} [${s.matched_keyword}]  ${s.text}`).join("\n")
+        : "—";
+    }
+
+    function renderSlowResult(data) {
+      document.getElementById("slowResult").hidden = false;
+      const badge = document.getElementById("slowBadge");
+      badge.textContent = data.status === "ok" ? "ok" : "error";
+      badge.className = "badge " + (data.status === "ok" ? "complete" : "needs");
+
+      const rows = data.slow_requests || [];
+      document.getElementById("slowSummary").textContent =
+        `Медленных: ${rows.length} · порог: ${data.min_duration_ms} мс · распознано: ${data.parsed_line_count ?? "?"}` +
+        (data.parsed_by_format ? ` · форматы: ${Object.entries(data.parsed_by_format).map(([k,v])=>k+":"+v).join(", ")}` : "");
+
+      document.getElementById("slowConclusions").innerHTML = (data.conclusions||[]).length
+        ? (data.conclusions||[]).map(c => `<li>${escapeHtml(c)}</li>`).join("")
+        : "";
+
+      document.querySelector("#slowTable tbody").innerHTML = rows.length
+        ? rows.map(r => `<tr>
+            <td>${escapeHtml(r.ended_at || "—")}</td>
+            <td>${escapeHtml(r.method)}</td>
+            <td><code>${escapeHtml(r.path)}</code></td>
+            <td>${r.duration_min}</td>
+            <td>${r.duration_ms}</td>
+            <td>${escapeHtml(r.log_format || "—")}</td>
+          </tr>`).join("")
+        : "<tr><td colspan=\"6\">Нет запросов выше порога</td></tr>";
+    }
+
+    function renderErrorResult(data) {
+      document.getElementById("errorResult").hidden = false;
+      const badge = document.getElementById("errorBadge");
+      badge.textContent = data.status === "ok" ? "ok" : "error";
+      badge.className = "badge " + (data.status === "ok" ? "complete" : "needs");
+
+      const errors = data.errors_in_window || [];
+      document.getElementById("errorSummary").textContent =
+        `Ошибок в срезе: ${errors.length} · корреляций: ${(data.correlations||[]).length}`;
+
+      document.getElementById("errorConclusions").innerHTML = (data.conclusions||[]).length
+        ? (data.conclusions||[]).map(c => `<li>${escapeHtml(c)}</li>`).join("")
+        : "";
+
+      document.getElementById("errorList").textContent = errors.length
+        ? errors.map(e => `${e.file}:${e.line_number} [${e.error_engine}/${e.category}]  ${e.text}`).join("\n")
+        : "—";
+
+      const corr = data.correlations || [];
+      document.getElementById("errorCorrelations").textContent = corr.length
+        ? corr.map(c => {
+            const sr = c.slow_request || {};
+            const errs = (c.related_errors || []).map(e => `[${e.category}] ${e.text?.slice(0, 80)}`).join("; ");
+            return `${sr.method || "?"} ${sr.path || "?"} (${sr.duration_ms} ms) → ${errs || "—"}`;
+          }).join("\n")
+        : "—";
+    }
+
+    function renderConclusionResult(data) {
+      document.getElementById("conclusionResult").hidden = false;
+      const badge = document.getElementById("conclusionBadge");
+      badge.textContent = data.status === "ok" ? "ok" : "error";
+      badge.className = "badge " + (data.status === "ok" ? "complete" : "needs");
+
+      const conf = document.getElementById("conclusionConfidence");
+      if (data.confidence) {
+        conf.hidden = false;
+        conf.textContent = data.confidence;
+        conf.className = "badge " + (data.confidence === "high" ? "complete" : "needs");
+      } else {
+        conf.hidden = true;
+      }
+
+      document.getElementById("conclusionMarkdown").textContent = data.conclusion_markdown || "—";
+      document.getElementById("conclusionReason").textContent = data.confidence_reason || "";
+
+      document.getElementById("conclusionSupported").innerHTML = (data.supported_by||[]).length
+        ? (data.supported_by||[]).map(s => `<li>${escapeHtml(s)}</li>`).join("")
+        : "";
+      document.getElementById("conclusionNotProven").innerHTML = (data.not_proven||[]).length
+        ? (data.not_proven||[]).map(s => `<li>${escapeHtml(s)}</li>`).join("")
+        : "";
+      document.getElementById("conclusionActions").innerHTML = (data.recommended_actions||[]).length
+        ? (data.recommended_actions||[]).map(s => `<li>${escapeHtml(s)}</li>`).join("")
+        : "";
+      document.getElementById("conclusionRawJson").textContent = JSON.stringify(data.raw_llm || data, null, 2);
     }
 
     async function loadHealth() {
-      const logsInput = document.getElementById("logsPath");
-      const caseoneInput = document.getElementById("caseonePath");
       try {
         const r = await fetch("/api/health");
         const h = await r.json();
         const p = h.paths || {};
         modelName.textContent = h.ollama_model;
-
-        let meta = `Ollama: ${h.ollama_base_url}`;
-        if (h.runtime === "docker") {
-          meta += ` · Docker: логи <code>${p.rag_mount}</code>`;
-          if (p.rag_mount_exists) meta += " ✓"; else meta += " ✗ не смонтирован";
-          meta += `, caseone <code>${p.caseone_mount}</code>`;
-          if (p.caseone_mount_exists) meta += " ✓"; else meta += " (опционально)";
-        }
-        if (p.ren_log_folders?.length) {
-          meta += ` · REN: ${p.ren_log_folders.join(", ")}`;
-        }
-        healthMeta.innerHTML = meta;
-
-        if (p.default_logs_path && !logsInput.value) {
-          logsInput.placeholder = p.default_logs_path;
-        }
-        if (p.default_caseone_path && !caseoneInput.value) {
-          caseoneInput.placeholder = p.default_caseone_path;
-        } else if (h.runtime === "docker" && !caseoneInput.value) {
-          caseoneInput.placeholder = p.caseone_mount || "/caseone";
-        }
+        healthMeta.innerHTML =
+          `Ollama: ${h.ollama_base_url} · temp: <code>${p.temp_dir||"?"}</code>` +
+          (p.caseone_exists ? " · caseone ✓" : " · caseone ✗ (положите код в temp/caseone)");
       } catch {
         healthMeta.textContent = "Не удалось получить /api/health";
       }
     }
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      errorEl.hidden = true;
-      result.hidden = true;
-      filterResult.hidden = true;
-      symptomResult.hidden = true;
-      slowResult.hidden = true;
-      errorResult.hidden = true;
-      conclusionResult.hidden = true;
-      lastTimeWindow = [];
-      lastFilterSummary = null;
-      lastSymptomData = null;
-      lastSlowData = null;
-      lastErrorData = null;
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Обработка…";
+    async function sendMessage() {
+      clearError();
+      const text = messageInput.value.trim();
+      const files = fileInput.files;
+      if (!text && (!files || !files.length)) return;
 
-      const payload = {
-        incident_description: document.getElementById("description").value.trim(),
-        logs_path: document.getElementById("logsPath").value.trim() || null,
-        caseone_path: document.getElementById("caseonePath").value.trim() || null,
-      };
+      const hadText = Boolean(text);
+      const fd = new FormData();
+      fd.append("message", text);
+      for (const f of files) fd.append("files", f);
+
+      pendingLoading = true;
+      if (hadText) {
+        if (!dialogState) dialogState = { messages: [] };
+        dialogState.messages = dialogState.messages || [];
+        dialogState.messages.push({ role: "user", content: text });
+      }
+      renderDialog();
+      sendBtn.disabled = true;
+      messageInput.value = "";
+      fileInput.value = "";
+
+      const url = incidentId
+        ? `/api/incident/dialog/${incidentId}/message`
+        : "/api/incident/dialog/start";
 
       try {
-        const res = await fetch("/api/intent-table", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        const res = await fetch(url, { method: "POST", body: fd });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || res.statusText);
-
-        result.hidden = false;
-        const complete = data.status === "complete";
-        statusBadge.textContent = complete ? "готово" : "нужны уточнения";
-        statusBadge.className = "badge " + (complete ? "complete" : "needs");
-
-        const t = data.table;
-        if (t) {
-          tbody.innerHTML = [
-            fieldRow("Дата инцидента", t.incident_date),
-            fieldRow("Начало окна", t.time_window_start),
-            fieldRow("Конец окна", t.time_window_end),
-            `<tr><th>Симптомы</th><td>${(t.symptoms || []).map(s => `<div>• ${s}</div>`).join("") || "—"}</td></tr>`,
-            `<tr><th>Цель разбора</th><td>${t.investigation_goal || "—"}</td></tr>`,
-            `<tr><th>Уверенность</th><td>${t.confidence}</td></tr>`,
-            `<tr><th>Не хватает полей</th><td>${(t.missing_fields || []).join(", ") || "—"}</td></tr>`,
-            `<tr><th>Заметки</th><td>${(t.notes || []).map(n => `<div>• ${n}</div>`).join("") || "—"}</td></tr>`,
-          ].join("");
-          patternsList.innerHTML = (t.log_search_patterns || [])
-            .map(p => `<li><code>${p}</code></li>`).join("") || "<li>—</li>";
-          keywordsList.innerHTML = (t.search_keywords || [])
-            .map(k => `<li><code>${k}</code></li>`).join("") || "<li>—</li>";
+        incidentId = data.incident_id;
+        dialogState = data.dialog;
+        syncIntentFromDialog();
+        if (hadText) {
+          lastTimeWindow = [];
+          lastSlowTimeWindow = [];
+          lastFilterSummary = null;
+          lastSymptomData = null;
+          lastSlowData = null;
+          lastErrorData = null;
         }
-        rawJson.textContent = JSON.stringify(data.raw_llm || data, null, 2);
-
-        const qs = data.clarifying_questions || [];
-        questionsBlock.hidden = qs.length === 0;
-        questionsList.innerHTML = qs.map(q => `<li>${q}</li>`).join("");
-
-        lastIntent = data;
-        updateActionButtons();
       } catch (err) {
-        errorEl.hidden = false;
-        errorEl.textContent = err.message || String(err);
+        showError(err.message || String(err));
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Шаг 0 — таблица намерений";
+        pendingLoading = false;
+        renderDialog();
+        sendBtn.disabled = false;
+        updateActionButtons();
       }
+    }
+
+    sendBtn.addEventListener("click", sendMessage);
+    messageInput.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
     });
 
     function buildFilterSummaryFromState() {
+      const t = lastIntent?.table;
       return lastFilterSummary || {
         total_matching_lines: lastTimeWindow.length,
         time_window_line_count: lastTimeWindow.length,
         time_window_truncated: false,
+        slow_time_window_line_count: lastSlowTimeWindow.length,
+        slow_time_window_truncated: false,
         files_in_window: [],
-        patterns_used: lastIntent?.table?.log_search_patterns || [],
+        patterns_used: t?.log_search_patterns || [],
+        slow_patterns_used: t?.slow_log_search_patterns || [],
+        time_filter_mode: t?.time_filter_mode || "time_window",
       };
     }
 
-    document.getElementById("logsPath").addEventListener("input", updateActionButtons);
+    submitBtn.addEventListener("click", () => runStep(submitBtn, "result", "Шаг 0", async () => {
+      if (!dialogState) throw new Error("Нет активного диалога.");
+      const paths = sessionPaths();
+      const text = (dialogState.messages||[]).filter(m=>m.role==="user").map(m=>m.content).join("\n");
+      const res = await fetch("/api/intent-table", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          incident_description: text || "Инцидент",
+          logs_path: paths.logs_path,
+          caseone_path: paths.caseone_path,
+          user_force_complete: dialogState.user_forced_complete,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || res.statusText);
+      lastIntent = data;
+      dialogState.intent = data;
+      dialogState.intent_status = data.status;
+      syncIntentFromDialog();
+    }));
 
-    filterBtn.addEventListener("click", async () => {
-      errorEl.hidden = true;
-      filterResult.hidden = true;
-      filterBtn.disabled = true;
-      filterBtn.textContent = "Поиск в логах…";
-
-      const logsPath = document.getElementById("logsPath").value.trim();
-      const patterns = lastIntent?.table?.log_search_patterns || [];
-      const payload = {
-        logs_path: logsPath,
-        log_search_patterns: patterns,
-        caseone_path: document.getElementById("caseonePath").value.trim() || null,
-      };
-
-      try {
-        const res = await fetch("/api/filter-logs", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-
-        filterResult.hidden = false;
-        const ok = data.status === "ok";
-        filterBadge.textContent = ok ? "готово" : "ошибка";
-        filterBadge.className = "badge " + (ok ? "complete" : "needs");
-
-        const src = data.sources;
-        const rec = src?.recursive_search !== false;
-        const depth = src?.max_depth != null ? `, глубина ≤ ${src.max_depth}` : "";
-        lastTimeWindow = data.time_window_lines || [];
-        lastFilterSummary = {
-          total_matching_lines: data.total_matching_lines ?? 0,
-          time_window_line_count: (data.time_window_lines || []).length,
-          time_window_truncated: !!data.time_window_truncated,
-          files_in_window: data.files_in_window || [],
-          patterns_used: data.patterns_used || [],
-        };
-        lastSymptomData = null;
-        lastSlowData = null;
-        lastErrorData = null;
-        const trunc = data.time_window_truncated ? " (срез обрезан)" : "";
-        filterSummary.textContent =
-          `Паттерны: ${(data.patterns_used || []).join(", ")} · ` +
-          `обход: ${rec ? "рекурсивный" : "только корень"}${depth} · ` +
-          `всего строк: ${data.total_matching_lines ?? 0} · ` +
-          `в срезе для шагов 3–4: ${lastTimeWindow.length}${trunc}`;
-
-        logFileCount.textContent = src?.log_file_count ?? 0;
-        logFilesList.innerHTML = (src?.log_files || [])
-          .slice(0, 40)
-          .map(f => {
-            const tag = f.priority ? " ★" : "";
-            const kb = (f.size_bytes / 1024).toFixed(0);
-            return `<li><code>${f.relative_path}</code> — ${kb} KB${tag}</li>`;
-          })
-          .join("") || "<li>—</li>";
-
-        matchTableBody.innerHTML = (data.by_file || [])
-          .map(row => {
-            const pri = row.priority ? " ★" : "";
-            return `<tr><td><code>${row.relative_path}</code>${pri}</td><td>${row.match_count}</td><td></td></tr>`;
-          })
-          .join("") || "<tr><td colspan=\"3\">—</td></tr>";
-
-        sampleLines.textContent = (data.sample_lines || [])
-          .map(s => `${s.file}:${s.line_number}: ${s.text}`)
-          .join("\n") || "—";
-
-        const errs = data.errors || [];
-        filterErrorsBlock.hidden = errs.length === 0;
-        filterErrorsList.innerHTML = errs.map(e => `<li>${e}</li>`).join("");
-      } catch (err) {
-        errorEl.hidden = false;
-        errorEl.textContent = err.message || String(err);
-      } finally {
-        updateActionButtons();
-        filterBtn.textContent = "Шаги 1–2 — сузить логи";
+    processBtn.addEventListener("click", () => runStep(processBtn, "conclusionResult", "Обработка", async () => {
+      if (!lastIntent?.table) throw new Error("Нет таблицы намерений.");
+      const paths = sessionPaths();
+      clearPipelineLog();
+      pipelineLogEl.value = "Запуск обработки инцидента (шаги 1–8)…\n";
+      const res = await fetch("/api/incident/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          incident_id: incidentId,
+          intent_table: lastIntent.table,
+          logs_path: paths.logs_path,
+          caseone_path: paths.caseone_path,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || res.statusText);
+      applyPipelineResults(data);
+      if (data.status === "error") {
+        throw new Error(data.errors?.[0] || "Обработка завершилась с ошибкой на шаге 1.");
       }
-    });
-
-    symptomBtn.addEventListener("click", async () => {
-      errorEl.hidden = true;
-      symptomResult.hidden = true;
-      symptomBtn.disabled = true;
-      symptomBtn.textContent = "Поиск симптомов…";
-
-      const t = lastIntent?.table;
-      const payload = {
-        logs_path: document.getElementById("logsPath").value.trim(),
-        log_search_patterns: t?.log_search_patterns || [],
-        search_keywords: t?.search_keywords || [],
-        time_window_lines: lastTimeWindow,
-        caseone_path: document.getElementById("caseonePath").value.trim() || null,
-        recursive: true,
-      };
-
-      try {
-        const res = await fetch("/api/symptom-search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-
-        symptomResult.hidden = false;
-        const ok = data.status === "ok";
-        symptomBadge.textContent = ok ? "готово" : "ошибка";
-        symptomBadge.className = "badge " + (ok ? "complete" : "needs");
-
-        symptomSummary.textContent =
-          `Совпадений: ${data.total_matching_lines ?? 0}`;
-
-        symptomKeywordsUsed.innerHTML = (data.search_keywords_used || [])
-          .map(k => `<li><code>${k}</code></li>`).join("") || "<li>—</li>";
-
-        symptomConclusions.innerHTML = (data.conclusions || [])
-          .map(c => `<li>${c}</li>`).join("") || "<li>—</li>";
-
-        symptomFileTableBody.innerHTML = (data.by_file || [])
-          .map(row => {
-            const pri = row.priority ? " ★" : "";
-            return `<tr><td><code>${row.relative_path}</code>${pri}</td><td>${row.match_count}</td><td></td></tr>`;
-          })
-          .join("") || "<tr><td colspan=\"3\">—</td></tr>";
-
-        symptomSamples.textContent = (data.sample_lines || [])
-          .map(s => `[${s.matched_keyword}] ${s.file}:${s.line_number}: ${s.text}`)
-          .join("\n") || "—";
-
-        lastSymptomData = data;
-
-        const errs = data.errors || [];
-        symptomErrorsBlock.hidden = errs.length === 0;
-        symptomErrorsList.innerHTML = errs.map(e => `<li>${e}</li>`).join("");
-      } catch (err) {
-        errorEl.hidden = false;
-        errorEl.textContent = err.message || String(err);
-      } finally {
-        updateActionButtons();
-        symptomBtn.textContent = "Шаг 3 — ключевые слова";
-      }
-    });
-
-    slowBtn.addEventListener("click", async () => {
-      errorEl.hidden = true;
-      slowResult.hidden = true;
-      slowBtn.disabled = true;
-      slowBtn.textContent = "Разбор middleware…";
-
-      const t = lastIntent?.table;
-      const payload = {
-        logs_path: document.getElementById("logsPath").value.trim(),
-        log_search_patterns: t?.log_search_patterns || [],
-        search_keywords: t?.search_keywords || [],
-        time_window_lines: lastTimeWindow,
-        caseone_path: document.getElementById("caseonePath").value.trim() || null,
-        recursive: true,
-        min_duration_ms: 300000,
-        top_n: 25,
-        filter_by_keywords: false,
-        middleware_only: true,
-      };
-
-      try {
-        const res = await fetch("/api/slow-requests", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-
-        slowResult.hidden = false;
-        const ok = data.status === "ok";
-        slowBadge.textContent = ok ? "готово" : "ошибка";
-        slowBadge.className = "badge " + (ok ? "complete" : "needs");
-
-        slowSummary.textContent =
-          `Порог ≥ ${(data.min_duration_ms / 60000).toFixed(0)} мин · ` +
-          `файлов: ${(data.middleware_files_scanned || []).length} · ` +
-          `разобрано строк: ${data.parsed_line_count ?? 0} · ` +
-          `медленных: ${(data.slow_requests || []).length}`;
-
-        slowConclusions.innerHTML = (data.conclusions || [])
-          .map(c => `<li>${c}</li>`).join("") || "<li>—</li>";
-
-        slowTableBody.innerHTML = (data.slow_requests || [])
-          .map(r => `<tr>
-            <td>${r.ended_at || "—"}</td>
-            <td>${r.method}</td>
-            <td><code>${r.path}</code></td>
-            <td>${r.duration_min}</td>
-            <td>${r.duration_ms}</td>
-            <td><small>${r.source_file}:${r.line_number}</small></td>
-          </tr>`)
-          .join("") || "<tr><td colspan=\"6\">—</td></tr>";
-
-        slowByPathTableBody.innerHTML = (data.by_path || [])
-          .map(p => `<tr>
-            <td><code>${p.path}</code></td>
-            <td>${p.count}</td>
-            <td>${p.max_duration_min}</td>
-            <td>${p.avg_duration_ms}</td>
-          </tr>`)
-          .join("") || "<tr><td colspan=\"4\">—</td></tr>";
-
-        const errs = data.errors || [];
-        slowErrorsBlock.hidden = errs.length === 0;
-        slowErrorsList.innerHTML = errs.map(e => `<li>${e}</li>`).join("");
-
-        lastSlowData = data;
-      } catch (err) {
-        errorEl.hidden = false;
-        errorEl.textContent = err.message || String(err);
-      } finally {
-        updateActionButtons();
-        slowBtn.textContent = "Шаг 4 — долгие запросы";
-      }
-    });
-
-    errorBtn.addEventListener("click", async () => {
-      errorEl.hidden = true;
-      errorResult.hidden = true;
-      errorBtn.disabled = true;
-      errorBtn.textContent = "Разбор ошибок…";
-
-      const t = lastIntent?.table;
-      const payload = {
-        logs_path: document.getElementById("logsPath").value.trim(),
-        log_search_patterns: t?.log_search_patterns || [],
-        time_window_lines: lastTimeWindow,
-        slow_requests: (lastSlowData && lastSlowData.slow_requests) || [],
-        search_keywords: t?.search_keywords || [],
-        correlation_window_sec: 90,
-        global_log_only: true,
-        recursive: true,
-      };
-
-      try {
-        const res = await fetch("/api/correlate-errors", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-
-        errorResult.hidden = false;
-        const ok = data.status === "ok";
-        errorBadge.textContent = ok ? "готово" : "ошибка";
-        errorBadge.className = "badge " + (ok ? "complete" : "needs");
-
-        errorSummary.textContent =
-          `Ошибок в срезе: ${(data.errors_in_window || []).length} · ` +
-          `окно корреляции: ±${data.correlation_window_sec ?? 90} с · ` +
-          `привязок к шагу 4: ${(data.correlations || []).filter(c => c.related_errors?.length).length}`;
-
-        errorConclusions.innerHTML = (data.conclusions || [])
-          .map(c => `<li>${c}</li>`).join("") || "<li>—</li>";
-
-        errorCategories.innerHTML = (data.by_category || [])
-          .map(c => `<li><code>${errorCategoryLabels[c.category] || c.category}</code>: ${c.count}</li>`)
-          .join("") || "<li>—</li>";
-
-        errorList.textContent = (data.errors_in_window || [])
-          .map(e => `[${errorCategoryLabels[e.category] || e.category}] ${e.timestamp || "?"} ${e.file}:${e.line_number}: ${e.text}`)
-          .join("\n") || "—";
-
-        errorCorrelations.textContent = (data.correlations || [])
-          .map(c => {
-            const s = c.slow_request;
-            const hdr = `${s.ended_at || "?"} ${s.method} ${s.path} (${s.duration_min} мин)`;
-            const rel = (c.related_errors || [])
-              .map(e => `  · [${errorCategoryLabels[e.category] || e.category}] ${e.timestamp}: ${e.matched_pattern}`)
-              .join("\n");
-            return rel ? `${hdr}\n${rel}` : `${hdr}\n  (нет ошибок в окне)`;
-          })
-          .join("\n\n") || (((lastSlowData && lastSlowData.slow_requests) || []).length ? "—" : "Шаг 4 не выполнялся — только список ошибок выше.");
-
-        lastErrorData = data;
-        const errs = data.errors || [];
-        errorErrorsBlock.hidden = errs.length === 0;
-        errorErrorsList.innerHTML = errs.map(e => `<li>${e}</li>`).join("");
-      } catch (err) {
-        errorEl.hidden = false;
-        errorEl.textContent = err.message || String(err);
-      } finally {
-        updateActionButtons();
-        errorBtn.textContent = "Шаг 5 — ошибки";
-      }
-    });
-
-    conclusionBtn.addEventListener("click", async () => {
-      errorEl.hidden = true;
-      conclusionResult.hidden = true;
-      conclusionBtn.disabled = true;
-      conclusionBtn.textContent = "Генерация вывода…";
-
-      const payload = {
-        intent_table: lastIntent.table,
-        filter_summary: buildFilterSummaryFromState(),
-        symptom_search: lastSymptomData,
-        slow_requests: lastSlowData,
-        error_correlation: lastErrorData,
-      };
-
-      try {
-        const res = await fetch("/api/incident-conclusion", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || res.statusText);
-
-        conclusionResult.hidden = false;
-        const ok = data.status === "ok";
-        conclusionBadge.textContent = ok ? "готово" : "ошибка";
-        conclusionBadge.className = "badge " + (ok ? "complete" : "needs");
-
-        const conf = data.confidence || "medium";
-        conclusionConfidence.textContent = `уверенность: ${conf}`;
-        conclusionConfidence.className = "badge " + (
-          conf === "high" ? "complete" : conf === "low" ? "needs" : ""
-        );
-
-        conclusionReason.textContent = data.confidence_reason || "";
-        conclusionMarkdown.textContent = data.conclusion_markdown || "—";
-
-        conclusionSupported.innerHTML = (data.supported_by || [])
-          .map(s => `<li>${s}</li>`).join("") || "<li>—</li>";
-        conclusionNotProven.innerHTML = (data.not_proven || [])
-          .map(s => `<li>${s}</li>`).join("") || "<li>—</li>";
-        conclusionActions.innerHTML = (data.recommended_actions || [])
-          .map(s => `<li>${s}</li>`).join("") || "<li>—</li>";
-
-        conclusionRawJson.textContent = JSON.stringify(data.raw_llm || data, null, 2);
-
-        const errs = data.errors || [];
-        conclusionErrorsBlock.hidden = errs.length === 0;
-        conclusionErrorsList.innerHTML = errs.map(e => `<li>${e}</li>`).join("");
-      } catch (err) {
-        errorEl.hidden = false;
-        errorEl.textContent = err.message || String(err);
-      } finally {
-        updateActionButtons();
-        conclusionBtn.textContent = "Шаг 6 — вывод (LLM)";
-      }
-    });
+    }));
 
     loadHealth();
+    updateActionButtons();
   </script>
 </body>
 </html>

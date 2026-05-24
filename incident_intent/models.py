@@ -9,12 +9,13 @@ class IntentTableRequest(BaseModel):
     incident_description: str = Field(min_length=3, description="Текст описания инцидента")
     logs_path: str | None = Field(
         default=None,
-        description="Путь к папке логов, например D:\\RAG\\REN-MSKCASPRO01_2026-04-23",
+        description="Путь к папке логов",
     )
     caseone_path: str | None = Field(
         default=None,
-        description="Путь к caseone, например D:\\RAG\\tsrag\\temp\\uploads\\caseone",
+        description="Путь к caseone",
     )
+    user_force_complete: bool = False
 
 
 class IntentField(BaseModel):
@@ -35,6 +36,23 @@ class IntentTable(BaseModel):
     investigation_goal: str
     optional_paths: dict[str, str | None] = Field(default_factory=dict)
     log_search_patterns: list[str] = Field(default_factory=list)
+    slow_log_search_patterns: list[str] = Field(
+        default_factory=list,
+        description="Расширенные префиксы времени (±ч) для шагов 4–5",
+    )
+    min_slow_request_ms: int | None = Field(
+        default=None,
+        description="Порог «долгого» HTTP из жалобы (шаг 4)",
+    )
+    reported_duration_min_minutes: float | None = Field(
+        default=None,
+        description="Нижняя оценка длительности из жалобы, минуты",
+    )
+    reported_duration_max_minutes: float | None = Field(
+        default=None,
+        description="Верхняя оценка длительности из жалобы, минуты",
+    )
+    time_filter_mode: Literal["time_window", "full_corpus"] = "time_window"
     confidence: Literal["high", "medium", "low"] = "medium"
     missing_fields: list[str] = Field(default_factory=list)
     clarifying_questions: list[str] = Field(default_factory=list)

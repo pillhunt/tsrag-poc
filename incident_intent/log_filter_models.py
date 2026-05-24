@@ -9,6 +9,10 @@ class LogFileInfo(BaseModel):
     relative_path: str
     size_bytes: int
     priority: bool = False
+    log_kind: str = Field(
+        default="unknown",
+        description="app | web | db | unknown — эвристика по имени/пути",
+    )
 
 
 class SourcesCheck(BaseModel):
@@ -20,6 +24,7 @@ class SourcesCheck(BaseModel):
     max_depth: int | None = None
     log_file_count: int = 0
     log_files: list[LogFileInfo] = Field(default_factory=list)
+    detected_timestamp_formats: dict[str, str] = Field(default_factory=dict)
     caseone_path: str | None = None
     caseone_exists: bool | None = None
     caseone_is_directory: bool | None = None
@@ -48,7 +53,22 @@ class TimeWindowLine(BaseModel):
 
 class FilterLogsRequest(BaseModel):
     logs_path: str = Field(min_length=1)
-    log_search_patterns: list[str] = Field(min_length=1)
+    log_search_patterns: list[str] = Field(default_factory=list)
+    slow_log_search_patterns: list[str] = Field(
+        default_factory=list,
+        description="Расширенное окно для среза slow_time_window_lines (шаги 4–5)",
+    )
+    incident_date: str | None = Field(
+        default=None,
+        description="YYYY-MM-DD — для parse-режима и доп. паттернов",
+    )
+    time_window_start: str | None = Field(default=None, description="HH:MM")
+    time_window_end: str | None = Field(default=None, description="HH:MM")
+    time_filter_strategy: Literal["grep", "parsed", "auto"] = Field(
+        default="auto",
+        description="grep — только подстроки; auto — grep + parse по datetime",
+    )
+    time_filter_mode: Literal["time_window", "full_corpus"] = "time_window"
     caseone_path: str | None = None
     recursive: bool = Field(
         default=True,
@@ -72,13 +92,21 @@ class FilterLogsRequest(BaseModel):
 class FilterLogsResponse(BaseModel):
     status: Literal["ok", "error"]
     step: Literal["sources", "filter", "sources_and_filter"]
+    time_filter_mode: Literal["time_window", "full_corpus"] = "time_window"
+    time_filter_strategy: Literal["grep", "parsed", "auto"] = "auto"
     sources: SourcesCheck | None = None
     patterns_used: list[str] = Field(default_factory=list)
+    patterns_expanded: bool = False
+    detected_format_summary: list[str] = Field(default_factory=list)
     total_matching_lines: int = 0
     by_file: list[FileMatchStats] = Field(default_factory=list)
     sample_lines: list[SampleLine] = Field(default_factory=list)
     time_window_lines: list[TimeWindowLine] = Field(default_factory=list)
+    slow_time_window_lines: list[TimeWindowLine] = Field(default_factory=list)
     files_in_window: list[str] = Field(default_factory=list)
+    slow_patterns_used: list[str] = Field(default_factory=list)
     time_window_truncated: bool = False
+    slow_time_window_truncated: bool = False
     time_window_total_count: int = 0
+    slow_time_window_total_count: int = 0
     errors: list[str] = Field(default_factory=list)

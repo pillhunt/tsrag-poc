@@ -24,9 +24,13 @@ class SlowRequestsRequest(FilterLogsRequest):
         default=False,
         description="Только запросы, где path/строка совпадает с search_keywords",
     )
-    middleware_only: bool = Field(
-        default=True,
-        description="Искать только в *RequestLoggingMiddleware*.log",
+    http_access_only: bool = Field(
+        default=False,
+        description="Только строки, распознанные как HTTP/access (любой формат)",
+    )
+    middleware_only: bool | None = Field(
+        default=None,
+        description="Устарело: true → http_access_only",
     )
 
 
@@ -39,6 +43,7 @@ class SlowRequestRow(BaseModel):
     source_file: str
     line_number: int
     matched_keyword: str | None = None
+    log_format: str | None = None
 
 
 class SlowRequestPathStats(BaseModel):
@@ -55,7 +60,9 @@ class SlowRequestsResponse(BaseModel):
     time_patterns_used: list[str] = Field(default_factory=list)
     min_duration_ms: int = 300_000
     filter_by_keywords: bool = False
-    middleware_files_scanned: list[str] = Field(default_factory=list)
+    http_access_only: bool = False
+    access_files_scanned: list[str] = Field(default_factory=list)
+    parsed_by_format: dict[str, int] = Field(default_factory=dict)
     parsed_line_count: int = 0
     unparsed_in_window: int = 0
     slow_requests: list[SlowRequestRow] = Field(default_factory=list)

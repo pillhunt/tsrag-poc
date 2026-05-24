@@ -18,6 +18,10 @@ def _intent_payload(table: IntentTable) -> dict[str, Any]:
         "symptoms": table.symptoms,
         "search_keywords": table.search_keywords,
         "investigation_goal": table.investigation_goal,
+        "min_slow_request_ms": table.min_slow_request_ms,
+        "reported_duration_min_minutes": table.reported_duration_min_minutes,
+        "reported_duration_max_minutes": table.reported_duration_max_minutes,
+        "slow_log_search_patterns": table.slow_log_search_patterns,
         "input_confidence": table.confidence,
         "notes": table.notes,
     }
@@ -51,15 +55,22 @@ def build_evidence_payload(req: IncidentConclusionRequest) -> dict[str, Any]:
         "step0_intent": _intent_payload(req.intent_table),
         "step1_2_slice": {
             "ran": fs.time_window_line_count > 0 or fs.total_matching_lines > 0,
+            "time_filter_mode": getattr(req.intent_table, "time_filter_mode", "time_window"),
             "patterns_used": fs.patterns_used,
+            "slow_patterns_used": fs.slow_patterns_used,
             "total_lines_in_time_window": fs.total_matching_lines,
             "lines_in_passed_slice": fs.time_window_line_count,
+            "slow_lines_in_passed_slice": fs.slow_time_window_line_count,
             "truncated": fs.time_window_truncated,
+            "slow_truncated": fs.slow_time_window_truncated,
             "files_in_window": fs.files_in_window[:30],
         },
         "step3_keywords": {"ran": False},
         "step4_slow_requests": {"ran": False},
         "step5_errors": {"ran": False},
+        "step_workflow_trace": {"ran": False},
+        "step_client_logs": {"ran": False},
+        "step_caseone_config": {"ran": False},
     }
 
     if req.symptom_search and req.symptom_search.status == "ok":
@@ -98,9 +109,11 @@ def build_evidence_payload(req: IncidentConclusionRequest) -> dict[str, Any]:
                     "path": r.path,
                     "duration_min": r.duration_min,
                     "duration_ms": r.duration_ms,
+                    "log_format": r.log_format,
                 }
                 for r in s4.slow_requests[:15]
             ],
+            "parsed_by_format": s4.parsed_by_format,
             "by_path": [
                 {
                     "path": p.path,
@@ -117,6 +130,7 @@ def build_evidence_payload(req: IncidentConclusionRequest) -> dict[str, Any]:
         samples = [
             {
                 "time": e.timestamp,
+                "engine": e.error_engine,
                 "category": e.category,
                 "file": e.file,
                 "line": e.line_number,
@@ -128,9 +142,13 @@ def build_evidence_payload(req: IncidentConclusionRequest) -> dict[str, Any]:
         payload["step5_errors"] = {
             "ran": True,
             "correlation_window_sec": s5.correlation_window_sec,
+            "global_log_only": s5.global_log_only,
             "error_count": len(s5.errors_in_window),
             "by_category": [
                 {"category": c.category, "count": c.count} for c in s5.by_category
+            ],
+            "by_engine": [
+                {"engine": c.engine, "count": c.count} for c in s5.by_engine
             ],
             "correlations": [
                 {
@@ -154,6 +172,62 @@ def build_evidence_payload(req: IncidentConclusionRequest) -> dict[str, Any]:
             ],
             "prior_conclusions": s5.conclusions,
             "sample_errors": _trim_samples(samples, limit=10, budget=budget),
+        }
+
+    wt = req.workflow_trace
+    if wt and wt.status == "ok":
+        payload["step_workflow_trace"] = {
+            "ran": wt.ran,
+            "files_matched": wt.files_matched[:10],
+            "line_count": wt.line_count,
+            "paired_operations": [
+                {
+                    "label": p.label,
+                    "begin_at": p.begin_at,
+                    "end_at": p.end_at,
+                    "duration_sec": p.duration_sec,
+                }
+                for p in wt.paired_operations[:15]
+            ],
+            "anomalies": wt.anomalies[:10],
+            "prior_conclusions": wt.conclusions,
+        }
+
+    cl = req.client_logs
+    if cl and cl.status == "ok":
+        cl_samples = [
+            {
+                "category": e.category,
+                "file": e.source_file,
+                "line": e.line_number,
+                "time": e.timestamp,
+                "text": e.text,
+            }
+            for e in cl.sample_lines
+        ]
+        payload["step_client_logs"] = {
+            "ran": cl.ran,
+            "event_count": cl.event_count,
+            "by_category": cl.by_category,
+            "prior_conclusions": cl.conclusions,
+            "sample_lines": _trim_samples(cl_samples, limit=8, budget=budget),
+        }
+
+    cc = req.caseone_config
+    if cc and cc.status == "ok":
+        payload["step_caseone_config"] = {
+            "ran": cc.ran,
+            "caseone_path": cc.caseone_path,
+            "files_scanned": cc.files_scanned,
+            "snippets": [
+                {
+                    "file": s.file,
+                    "key": s.key_path,
+                    "value": s.value,
+                }
+                for s in cc.snippets[:15]
+            ],
+            "prior_conclusions": cc.conclusions,
         }
 
     return payload

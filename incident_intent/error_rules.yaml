@@ -1,0 +1,133 @@
+engines:
+  mssql:
+    file_hints:
+      - errorlog
+      - sqlagent
+    categories:
+      sql_deadlock:
+        markers:
+          - deadlock victim
+          - "1205"
+      sql_pk_duplicate:
+        markers:
+          - PRIMARY KEY
+          - duplicate key
+          - "2627"
+      sql_timeout:
+        markers:
+          - timeout expired
+          - " -2"
+      sql_connection:
+        markers:
+          - connection forcibly closed
+          - "18456"
+          - login failed
+
+  postgres:
+    file_hints:
+      - postgresql
+      - pg_log
+    categories:
+      pg_deadlock:
+        markers:
+          - deadlock detected
+          - 40P01
+      pg_unique_violation:
+        markers:
+          - duplicate key value
+          - "23505"
+      pg_statement_timeout:
+        markers:
+          - statement timeout
+          - "57014"
+      pg_connection:
+        markers:
+          - could not connect
+          - connection refused
+          - "08006"
+
+  nginx:
+    file_hints:
+      - nginx
+      - access.log
+      - error.log
+    categories:
+      nginx_upstream_timeout:
+        markers:
+          - upstream timed out
+          - "504"
+      nginx_connect_refused:
+        markers:
+          - connect() failed
+          - connection refused
+      nginx_ssl:
+        markers:
+          - SSL_do_handshake
+          - certificate
+
+  iis:
+    file_hints:
+      - u_ex
+      - httperr
+      - w3svc
+    categories:
+      iis_500:
+        markers:
+          - sc-status 500
+          - HTTP/1.1 500
+          - " 500 "
+      iis_timeout:
+        markers:
+          - Request timed out
+          - ASP.NET
+      iis_502_503:
+        markers:
+          - "502"
+          - "503"
+          - Bad Gateway
+
+  dotnet_app:
+    file_hints:
+      - global.log
+      - nlog
+      - serilog
+      - requestlogging
+      - workflowtrace
+      - clientlogs
+    categories:
+      concurrency:
+        markers:
+          - карточка изменилась
+          - сохраните ещё раз
+          - сохраните еще раз
+      connection:
+        markers:
+          - ConnectionReset
+          - connection reset
+          - оборвал соединение
+          - разорвано
+      sql_deadlock:
+        markers:
+          - deadlock
+          - deadlock victim
+      sql_pk_duplicate:
+        markers:
+          - PRIMARY KEY
+          - duplicate key
+          - PK_BlockLines
+      sql_timeout:
+        markers:
+          - Timeout expired
+          - timeout expired
+
+generic:
+  markers:
+    - Exception
+    - ERROR
+    - Error
+    - SqlException
+    - DbUpdateException
+    - FAIL
+    - Fatal
+    - ошибк
+  category: generic_error
