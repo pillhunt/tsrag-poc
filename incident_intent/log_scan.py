@@ -19,6 +19,29 @@ def resolve_log_path(root: Path, relative_path: str, logs_is_file: bool) -> Path
     return root / relative_path.replace("/", os.sep)
 
 
+def iter_all_log_lines(
+    sources: SourcesCheck,
+) -> Iterator[tuple[str, int, str]]:
+    """Все строки всех log-файлов (режим full_corpus)."""
+    if not sources.logs_exists:
+        return
+    if not sources.logs_is_directory and not sources.logs_is_file:
+        return
+
+    root = Path(sources.logs_path).resolve()
+
+    for info in sources.log_files:
+        path = resolve_log_path(root, info.relative_path, sources.logs_is_file)
+        if not path.is_file():
+            continue
+        try:
+            with path.open(encoding="utf-8", errors="replace") as handle:
+                for line_no, raw in enumerate(handle, start=1):
+                    yield info.relative_path, line_no, raw.rstrip("\n\r")
+        except OSError:
+            continue
+
+
 def iter_lines_in_time_window(
     sources: SourcesCheck,
     time_patterns: tuple[str, ...],

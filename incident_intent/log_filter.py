@@ -23,7 +23,10 @@ from incident_intent.log_filter_models import (
     SourcesCheck,
     TimeWindowLine,
 )
-from incident_intent.time_window_slice import build_time_window_slice, files_in_window
+from incident_intent.time_window_slice import (
+    build_dual_time_window_slices,
+    files_in_window,
+)
 
 _MAX_LINE_LEN = 2000
 
@@ -169,12 +172,15 @@ def _stats_and_samples_from_slice(
 
 
 def filter_logs(req: FilterLogsRequest) -> FilterLogsResponse:
+    full_corpus = req.time_filter_mode == "full_corpus"
     patterns = [p.strip() for p in req.log_search_patterns if p and p.strip()]
-    if not patterns:
+    slow_patterns = [p.strip() for p in req.slow_log_search_patterns if p and p.strip()]
+    if not full_corpus and not patterns:
         return FilterLogsResponse(
             status="error",
             step="sources",
-            errors=["Нужен хотя бы один непустой log_search_pattern."],
+            time_filter_mode=req.time_filter_mode,
+            errors=["Нужен хотя бы один log_search_pattern или режим full_corpus."],
         )
 
     path_notes: list[str] = []
@@ -203,13 +209,16 @@ def filter_logs(req: FilterLogsRequest) -> FilterLogsResponse:
             step="sources",
             sources=sources,
             patterns_used=patterns,
+            time_filter_mode=req.time_filter_mode,
             errors=sources.errors,
         )
 
-    time_slice = build_time_window_slice(
+    time_slice, slow_slice = build_dual_time_window_slices(
         sources,
         tuple(patterns),
+        tuple(slow_patterns) if slow_patterns else tuple(patterns),
         max_lines=req.max_time_window_lines,
+        full_corpus=full_corpus,
     )
     by_file, samples = _stats_and_samples_from_slice(
         time_slice.lines,
@@ -220,7 +229,13 @@ def filter_logs(req: FilterLogsRequest) -> FilterLogsResponse:
 
     errors = list(sources.errors)
     total = time_slice.total_count
-    if total == 0 and sources.log_file_count > 0:
+    if full_corpus:
+        errors.insert(
+            0,
+            "Временной интервал не задан: использованы все строки логов (до лимита). "
+            "Вывод может быть некорректным — в срез могли попасть события других периодов.",
+        )
+    elif total == 0 and sources.log_file_count > 0:
         errors.append(
             "Строк по заданным префиксам не найдено. Проверьте дату/час в паттернах "
             "и часовой пояс логов."
@@ -228,7 +243,12 @@ def filter_logs(req: FilterLogsRequest) -> FilterLogsResponse:
     if time_slice.truncated:
         errors.append(
             f"Срез обрезан до {len(time_slice.lines)} строк (всего в окне {total}). "
-            "Шаги 3–4 используют только сохранённый срез."
+            "Шаги 3–5 используют только сохранённый срез."
+        )
+    if slow_slice.truncated and slow_slice is not time_slice:
+        errors.append(
+            f"Расширенный срез (долгие HTTP) обрезан до {len(slow_slice.lines)} строк "
+            f"(всего {slow_slice.total_count})."
         )
 
     critical = not sources.logs_exists or (
@@ -239,14 +259,19 @@ def filter_logs(req: FilterLogsRequest) -> FilterLogsResponse:
     return FilterLogsResponse(
         status=status,
         step="sources_and_filter",
+        time_filter_mode=req.time_filter_mode,
         sources=sources,
-        patterns_used=patterns,
+        patterns_used=patterns if not full_corpus else [],
         total_matching_lines=total,
         by_file=by_file,
         sample_lines=samples,
         time_window_lines=time_slice.lines,
+        slow_time_window_lines=slow_slice.lines,
         files_in_window=files_in_window(time_slice),
+        slow_patterns_used=slow_patterns if not full_corpus else [],
         time_window_truncated=time_slice.truncated,
+        slow_time_window_truncated=slow_slice.truncated,
         time_window_total_count=total,
+        slow_time_window_total_count=slow_slice.total_count,
         errors=errors,
     )

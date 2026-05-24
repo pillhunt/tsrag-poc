@@ -48,7 +48,12 @@ class TimeWindowLine(BaseModel):
 
 class FilterLogsRequest(BaseModel):
     logs_path: str = Field(min_length=1)
-    log_search_patterns: list[str] = Field(min_length=1)
+    log_search_patterns: list[str] = Field(default_factory=list)
+    slow_log_search_patterns: list[str] = Field(
+        default_factory=list,
+        description="Расширенное окно для среза slow_time_window_lines (шаги 4–5)",
+    )
+    time_filter_mode: Literal["time_window", "full_corpus"] = "time_window"
     caseone_path: str | None = None
     recursive: bool = Field(
         default=True,
@@ -72,13 +77,18 @@ class FilterLogsRequest(BaseModel):
 class FilterLogsResponse(BaseModel):
     status: Literal["ok", "error"]
     step: Literal["sources", "filter", "sources_and_filter"]
+    time_filter_mode: Literal["time_window", "full_corpus"] = "time_window"
     sources: SourcesCheck | None = None
     patterns_used: list[str] = Field(default_factory=list)
     total_matching_lines: int = 0
     by_file: list[FileMatchStats] = Field(default_factory=list)
     sample_lines: list[SampleLine] = Field(default_factory=list)
     time_window_lines: list[TimeWindowLine] = Field(default_factory=list)
+    slow_time_window_lines: list[TimeWindowLine] = Field(default_factory=list)
     files_in_window: list[str] = Field(default_factory=list)
+    slow_patterns_used: list[str] = Field(default_factory=list)
     time_window_truncated: bool = False
+    slow_time_window_truncated: bool = False
     time_window_total_count: int = 0
+    slow_time_window_total_count: int = 0
     errors: list[str] = Field(default_factory=list)

@@ -14,8 +14,12 @@ class FilterSummary(BaseModel):
     total_matching_lines: int = 0
     time_window_line_count: int = 0
     time_window_truncated: bool = False
+    slow_time_window_line_count: int = 0
+    slow_time_window_truncated: bool = False
     files_in_window: list[str] = Field(default_factory=list)
     patterns_used: list[str] = Field(default_factory=list)
+    slow_patterns_used: list[str] = Field(default_factory=list)
+    time_filter_mode: Literal["time_window", "full_corpus"] = "time_window"
 
 
 class IncidentConclusionRequest(BaseModel):
