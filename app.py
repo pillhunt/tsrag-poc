@@ -26,6 +26,8 @@ from incident_intent.e_analysis_models import (
     WorkflowTraceAnalysisRequest,
     WorkflowTraceAnalysisResponse,
 )
+from incident_intent.pipeline import run_incident_pipeline
+from incident_intent.pipeline_models import PipelineRequest, PipelineResponse
 from incident_intent.workflow_trace_analysis import analyze_workflow_trace
 from incident_intent.dialog_models import DialogResponse, DialogState
 from incident_intent.dialog_service import (
@@ -210,6 +212,20 @@ async def index_caseone_config_endpoint(
     body: CaseoneConfigIndexRequest,
 ) -> CaseoneConfigIndexResponse:
     return await asyncio.to_thread(index_caseone_config, body)
+
+
+@app.post("/api/incident/process", response_model=PipelineResponse)
+async def incident_process_endpoint(body: PipelineRequest) -> PipelineResponse:
+    resolved_logs = body.logs_path
+    resolved_co = body.caseone_path
+    if resolved_logs:
+        resolved_logs, _ = resolve_host_path(resolved_logs)
+    if resolved_co:
+        resolved_co, _ = resolve_host_path(resolved_co)
+    req = body.model_copy(
+        update={"logs_path": resolved_logs or body.logs_path, "caseone_path": resolved_co}
+    )
+    return await run_incident_pipeline(req)
 
 
 @app.post("/api/incident-conclusion", response_model=IncidentConclusionResponse)

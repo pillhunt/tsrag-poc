@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from incident_intent.time_window_utils import _parse_hhmm
 
 DEFAULT_FORMATS: tuple[str, ...] = ("iso_space", "iso_t", "nginx", "eu_dot")
-_MAX_PATTERNS = 48
+_MAX_PATTERNS = 128
 
 _MONTHS_EN = (
     "Jan",

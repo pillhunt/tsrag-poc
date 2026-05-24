@@ -65,7 +65,7 @@ async def build_incident_conclusion(
         return IncidentConclusionResponse(
             status="error",
             errors=[
-                "Нет среза логов (шаги 1–2). Сначала выполните «Сузить логи»."
+                "Нет среза логов (шаг 1). Сначала выполните обработку инцидента."
             ],
         )
 

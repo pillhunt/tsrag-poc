@@ -30,7 +30,7 @@ def _assistant_reply(intent) -> str | None:
     if intent.status == "complete" and intent.table:
         tw = intent.table
         parts = [
-            "Достаточно данных для шагов 1–6.",
+            "Достаточно данных. Нажмите «Обработать инцидент» (шаги 1–8).",
             f"Дата: {tw.incident_date.value or '—'}.",
             f"Окно: {tw.time_window_start.value or '—'} – {tw.time_window_end.value or '—'}.",
         ]
