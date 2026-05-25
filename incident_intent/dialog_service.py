@@ -10,7 +10,7 @@ from incident_intent.dialog_models import ChatMessage, DialogResponse, DialogSta
 from incident_intent.dialog_session import get_session, save_session
 from incident_intent.extractor import build_intent_table
 from incident_intent.models import IntentTableRequest
-from incident_intent.poc_paths import caseone_dir, incident_dir, incident_has_log_files
+from incident_intent.poc_paths import default_caseone_path, incident_dir, incident_has_log_files
 from incident_intent.skip_utils import is_user_done_message
 
 
@@ -130,7 +130,7 @@ def _apply_uploads(state: DialogState, files: list[tuple[str, bytes]]) -> str | 
 def _new_state(incident_id: str | None = None) -> DialogState:
     iid = incident_id or str(uuid.uuid4())
     logs = str(incident_dir(iid))
-    co = str(caseone_dir())
+    co = default_caseone_path()
     return DialogState(
         incident_id=iid,
         logs_path=logs,

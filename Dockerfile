@@ -12,9 +12,9 @@ COPY static ./static
 RUN mkdir -p /app/temp/caseone /app/temp/incidents
 
 ENV PORT=8090
-ENV POC_TEMP_DIR=/app/temp
 ENV OLLAMA_BASE_URL=http://tsrag-ollama:11434
-ENV OLLAMA_MODEL=llama3.1:8b-instruct-q6_K
+ENV OLLAMA_MODEL=llama3.1:8b-instruct-q4_K_M
+ENV OLLAMA_NUM_CTX=8192
 
 EXPOSE 8090
 

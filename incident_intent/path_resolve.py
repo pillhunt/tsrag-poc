@@ -1,11 +1,13 @@
 """
-Преобразование путей Windows (хост) → пути внутри Docker-контейнера.
+Преобразование путей и подсказки для смонтированных каталогов (логи, caseone).
 """
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
+
+from incident_intent.poc_paths import CASEONE_CONTAINER_PATH, logs_dir
 
 
 def _norm_key(path: str) -> str:
@@ -28,18 +30,8 @@ def _suffix_after_host(original: str, host_prefix: str) -> str | None:
 
 
 def _mapping_rules() -> list[tuple[str, str]]:
+    """Доп. правила из POC_PATH_MAP=host=mount;host2=mount2."""
     rules: list[tuple[str, str]] = []
-    rag_host = os.getenv("POC_RAG_HOST_PREFIX", "D:/RAG")
-    rag_mount = os.getenv("POC_RAG_MOUNT", "/rag")
-    rules.append((rag_host, rag_mount.rstrip("/")))
-
-    caseone_host = os.getenv(
-        "POC_CASEONE_HOST_PREFIX",
-        "D:/RAG/tsrag/temp/uploads/caseone",
-    )
-    caseone_mount = os.getenv("POC_CASEONE_MOUNT", "/caseone")
-    rules.append((caseone_host, caseone_mount.rstrip("/")))
-
     extra = os.getenv("POC_PATH_MAP", "")
     for part in extra.split(";"):
         part = part.strip()
@@ -47,13 +39,10 @@ def _mapping_rules() -> list[tuple[str, str]]:
             continue
         host, mount = part.split("=", 1)
         rules.append((host.strip(), mount.strip().rstrip("/")))
-
     return rules
 
 
 def is_docker_runtime() -> bool:
-    if os.getenv("POC_IN_DOCKER", "").lower() in ("1", "true", "yes"):
-        return True
     return Path("/.dockerenv").exists()
 
 
@@ -100,38 +89,38 @@ def list_mount_entries(mount: str, *, prefix: str = "", limit: int = 15) -> list
 
 def path_hints_for_missing(logs_path: str) -> list[str]:
     hints: list[str] = []
-    rag_mount = os.getenv("POC_RAG_MOUNT", "/rag")
+    logs_mount = str(logs_dir())
 
     if is_docker_runtime():
         hints.append(
-            "Docker: укажите путь как D:\\RAG\\… (преобразуется в /rag/…) "
-            f"или сразу {rag_mount}/<папка>."
+            f"Docker: положите папки REN-* в ./logs на хосте "
+            f"и укажите путь {logs_mount}/<папка> (или загрузите логи в инцидент)."
         )
 
-    ren_dirs = list_mount_entries(rag_mount, prefix="REN")
+    ren_dirs = list_mount_entries(logs_mount, prefix="REN")
     if ren_dirs:
-        hints.append(f"В {rag_mount} доступны: " + ", ".join(ren_dirs))
-    elif Path(rag_mount).is_dir():
-        hints.append(f"В {rag_mount} нет папок REN-* — проверьте POC_LOGS_HOST_DIR.")
+        hints.append(f"В {logs_mount} доступны: " + ", ".join(ren_dirs))
+    elif Path(logs_mount).is_dir():
+        hints.append(
+            f"В {logs_mount} нет папок REN-* — добавьте их в каталог logs/ проекта."
+        )
     else:
         hints.append(
-            f"Том {rag_mount} не смонтирован. "
-            "Задайте POC_LOGS_HOST_DIR=D:/RAG в docker-compose и перезапустите."
+            f"Каталог логов {logs_mount} недоступен — проверьте том ./logs в docker-compose."
         )
 
     if "ren-mskcaspro01" in _norm_key(logs_path) and ren_dirs:
         exact = [n for n in ren_dirs if n.upper() == "REN-MSKCASPRO01"]
         dated = [n for n in ren_dirs if n.upper().startswith("REN-MSKCASPRO01_")]
         if exact:
-            hints.append(f"Найдена папка: {rag_mount}/{exact[0]}")
+            hints.append(f"Найдена папка: {logs_mount}/{exact[0]}")
         elif dated:
-            hints.append(f"Возможно, нужна папка с датой: {rag_mount}/{dated[0]}")
+            hints.append(f"Возможно, нужна папка с датой: {logs_mount}/{dated[0]}")
 
-    caseone_mount = os.getenv("POC_CASEONE_MOUNT", "/caseone")
-    if not Path(caseone_mount).exists():
+    if not Path(CASEONE_CONTAINER_PATH).exists():
         hints.append(
-            f"Caseone ({caseone_mount}): смонтируйте POC_CASEONE_HOST_DIR "
-            "или оставьте поле пустым."
+            f"Caseone: задайте CASEONE_HOST_DIR в env/docker.env "
+            f"(монтируется в {CASEONE_CONTAINER_PATH}) или оставьте поле пустым."
         )
 
     return hints

@@ -48,7 +48,7 @@ from incident_intent.log_filter_models import FilterLogsRequest, FilterLogsRespo
 from incident_intent.models import IntentTableRequest, IntentTableResponse
 from incident_intent.ollama_client import DEFAULT_BASE_URL, DEFAULT_MODEL, DEFAULT_NUM_CTX
 from incident_intent.path_resolve import is_docker_runtime, resolve_host_path
-from incident_intent.poc_paths import caseone_dir, incidents_root, temp_dir
+from incident_intent.poc_paths import caseone_dir, incidents_root, logs_dir, temp_dir
 from incident_intent.slow_requests import find_slow_requests
 from incident_intent.slow_requests_models import SlowRequestsRequest, SlowRequestsResponse
 from incident_intent.symptom_search import search_symptoms
@@ -71,8 +71,13 @@ async def index() -> FileResponse:
 @app.get("/api/health")
 async def health() -> dict:
     td = temp_dir()
+    ld = logs_dir()
     co = caseone_dir()
     inc_root = incidents_root()
+    ren_dirs = sorted(
+        [p.name for p in ld.iterdir() if p.is_dir() and p.name.upper().startswith("REN")],
+        key=str.lower,
+    )[:10]
     incident_dirs = sorted(
         [p.name for p in inc_root.iterdir() if p.is_dir()],
         reverse=True,
@@ -86,6 +91,9 @@ async def health() -> dict:
         "paths": {
             "temp_dir": str(td),
             "temp_dir_exists": td.is_dir(),
+            "logs_dir": str(ld),
+            "logs_dir_exists": ld.is_dir(),
+            "ren_log_dirs": ren_dirs,
             "caseone_dir": str(co),
             "caseone_exists": co.is_dir(),
             "incidents_root": str(inc_root),

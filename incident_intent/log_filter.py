@@ -9,6 +9,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from incident_intent.log_date_range import format_date_range_hint, probe_log_date_range
+from incident_intent.poc_paths import CASEONE_CONTAINER_PATH
 from incident_intent.log_discovery import discover_log_files, is_priority_log, log_kind_for_path
 from incident_intent.path_resolve import (
     is_docker_runtime,
@@ -114,9 +115,8 @@ def _check_sources(
         if not caseone_exists:
             errors.append(f"Путь caseone не найден: {caseone_path}")
             if is_docker_runtime():
-                mount = os.getenv("POC_CASEONE_MOUNT", "/caseone")
                 errors.append(
-                    f"Смонтируйте caseone в контейнер ({mount}) "
+                    f"В Docker укажите путь {CASEONE_CONTAINER_PATH} (том CASEONE_HOST_DIR) "
                     "или оставьте поле пустым — для шагов 1–2 он не обязателен."
                 )
         elif not caseone_is_dir:

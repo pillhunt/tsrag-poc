@@ -1,22 +1,77 @@
+# Подстановка ${VAR} и значения по умолчанию: env/docker.env
+# Запуск: docker compose --env-file env/docker.env up --build
+#         .\compose.ps1 up --build
+
 services:
+  # =============================================
+  # Ollama: сервер + one-shot pull (PoC ждёт ollama-init).
+  # Модели в volume ollama_data — при перезапуске не скачиваются заново.
+  # =============================================
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "${OLLAMA_PORT}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=${OLLAMA_LISTEN}
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES}
+      - NVIDIA_VISIBLE_DEVICES=${NVIDIA_VISIBLE_DEVICES}
+    command: ["serve"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks:
+      - shared-network
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: ollama-init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+    entrypoint: /bin/sh
+    command:
+      - -lc
+      - |
+        u="$${OLLAMA_BASE_URL#http://}"; u="$${u#https://}"; export OLLAMA_HOST="$$u"
+        until ollama list >/dev/null 2>&1; do sleep 2; done
+        ollama pull ${OLLAMA_MODEL}
+    restart: "no"
+    networks:
+      - shared-network
+
   incident-intent-poc:
     build: .
     container_name: incident-intent-poc
     ports:
-      - "${POC_PORT:-8090}:8090"
+      - "${TSRAG_PORT}:8090"
     environment:
-      OLLAMA_BASE_URL: http://tsrag-ollama:11434
-      OLLAMA_MODEL: llama3.1:8b-instruct-q6_K
-      OLLAMA_TIMEOUT_SEC: "1200"
-      OLLAMA_NUM_CTX: "32768"
-      POC_IN_DOCKER: "1"
-      POC_TEMP_DIR: /app/temp
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
+      OLLAMA_TIMEOUT_SEC: ${OLLAMA_TIMEOUT_SEC}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX}
+      POC_LOGS_MOUNT: /app/logs
     volumes:
       - ./temp:/app/temp
-      - ./static:/app/static
+      - ./logs:/app/logs:ro
+      - ${CASEONE_HOST_DIR}:/caseone:ro
+    depends_on:
+      ollama-init:
+        condition: service_completed_successfully
     networks:
       - shared-network
     restart: unless-stopped
+
+volumes:
+  ollama_data:
 
 networks:
   shared-network:

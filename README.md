@@ -1,100 +1,147 @@
-# PoC: разбор инцидента (шаги 0–6)
+# PoC: разбор инцидента CaseOne
 
-Веб-форма принимает описание инцидента и пути к логам/caseone:
+Веб-интерфейс (`static/index.html`) и API для пошагового разбора инцидента: диалог с уточнениями, таблица намерений (Ollama), срез логов, поиск симптомов, долгие запросы, ошибки, workflow/client, конфиг caseone, итоговое заключение LLM.
 
-- **Шаг 0:** Ollama → таблица намерений: `log_search_patterns` (время) и **`search_keywords`** (содержимое, RU+EN, из описания инцидента).
-- **Шаги 1–2:** срез логов по времени → `time_window_lines` (все строки окна, с лимитом).
-- **Шаг 3–4:** поиск **только в `time_window_lines`** из шагов 1–2 (повторного чтения логов с диска нет).
-- **Шаг 3:** `search_keywords` по срезу.
-- **Шаг 4:** долгие HTTP/access-запросы (CaseOne middleware, nginx, IIS и др.) в строках среза.
-- **Шаг 5:** ошибки во **всех файлах среза** + привязка по времени к долгим запросам (шаг 4).
-- **Шаг 0:** таблица намерений (диалог + Ollama).
-- **Шаги 1–8:** одна кнопка «Обработать инцидент» — срез, keywords, slow, errors, WorkflowTrace, ClientLogs, caseone, заключение LLM. Журнал шагов внизу страницы. HITL не реализован.
+## Пайплайн
 
-## Что делает скрипт (алгоритм шага 0)
+| Шаг | ID | Содержание |
+|-----|-----|------------|
+| **0** | `intent` | Таблица намерений: дата/время, симптомы, `search_keywords`, `log_search_patterns` (Ollama + парсинг диалога). Дата — **только из текста пользователя**, не из пути к логам. |
+| **1** | `filter` | Проверка путей к логам и caseone, рекурсивный список `*.log`, срез по времени → `time_window_lines`. |
+| **2** | `symptoms` | Поиск `search_keywords` **только в срезе** (шаг 1). |
+| **3** | `slow` | Долгие HTTP/access-запросы в строках среза. |
+| **4** | `errors` | Ошибки во всех файлах среза + корреляция с шагом 3. |
+| **5** | `workflow_trace` | Анализ `WorkflowTrace.log` (если есть в срезе). |
+| **6** | `client_logs` | События клиентских логов в срезе. |
+| **7** | `caseone_config` | Индекс json/conf из `caseone_path` (если задан). |
+| **8** | `conclusion` | Итоговое заключение LLM по досье. |
 
-1. **Без модели:** из `logs_path` извлекает дату `YYYY-MM-DD` из имени папки (regex).
-2. **С моделью (Ollama):** из текста описания извлекает дату, окно времени, симптомы, **`search_keywords`**, цель разбора, паттерны времени, недостающие поля и уточняющие вопросы.
-3. **Слияние:** если дата из папки и из текста расходятся — помечает конфликт и просит уточнение.
-4. **Статус:** `complete` или `needs_clarification` (если нет даты/окна/симптомов или есть вопросы).
+В UI одна кнопка **«Обработать инцидент»** вызывает `POST /api/incident/process` (шаги 1–8 подряд, журнал внизу страницы). Отдельные endpoint'ы ниже сохранены для отладки.
 
-## Запуск в Docker (сеть `shared-network`, контейнер `tsrag-ollama`)
+HITL (Human-in-the-loop) не реализован.
+
+### Алгоритм шага 0
+
+1. **Ollama** извлекает из описания дату, окно времени, симптомы, ключевые слова, паттерны времени, недостающие поля и уточняющие вопросы.
+2. **Диалог:** при необходимости дата и время дополняются из реплик пользователя (без LLM).
+3. **Статус:** `complete` или `needs_clarification`.
+
+## Быстрый старт (Docker)
+
+Ollama и PoC поднимаются **одним** `docker-compose.yml`. Модель скачивается сервисом `ollama-init` (том `ollama_data`).
+
+1. Скопируйте переменные: `copy env\docker.env.example env\docker.env` и при необходимости отредактируйте `CASEONE_HOST_DIR`.
+2. Создайте сеть (один раз): `docker network create shared-network`
+3. Положите папки логов `REN-*` в каталог **`logs/`** в корне репозитория.
+4. Из корня проекта:
 
 ```powershell
-cd D:\RAG\poc
-docker compose up --build
+cd D:\Work\AI\tsrag-poc
+.\compose.ps1 up --build
 ```
 
-Открыть: http://localhost:8090
+Linux/macOS: `./compose.sh up --build`
 
-Требуется уже запущенный `tsrag-ollama` в сети `shared-network` (из `D:\RAG\tsrag\docker-compose.yaml`).
+Альтернатива: `docker compose --env-file env/docker.env up --build`
+
+Откройте http://localhost:8090 (порт на хосте — **`TSRAG_PORT`** в `env/docker.env`, по умолчанию `8090`).
+
+**Конфликт имён:** если контейнер `ollama` уже запущен другим проектом, остановите его (`docker rm -f ollama`) или переименуйте `container_name` в compose.
 
 ## Запуск локально (Ollama на хосте)
 
 ```powershell
-cd D:\RAG\poc
+cd D:\Work\AI\tsrag-poc
 pip install -r requirements.txt
 $env:OLLAMA_BASE_URL = "http://127.0.0.1:11434"
-$env:OLLAMA_MODEL = "llama3.1:8b-instruct-q6_K"
+$env:OLLAMA_MODEL = "llama3.1:8b-instruct-q4_K_M"
 python -m uvicorn app:app --host 0.0.0.0 --port 8090
 ```
 
-## API
+Логи для ручного пути: `logs/REN-…` или загрузка zip в диалог → `temp/incidents/<id>/`. Caseone локально: `temp/caseone` (создаётся автоматически).
+
+## Пути и тома (Docker)
+
+| Хост (корень проекта) | В контейнере | Назначение |
+|------------------------|--------------|------------|
+| `./temp` | `/app/temp` | Загрузки инцидентов, `temp/incidents/<id>`, локальный `temp/caseone` |
+| `./logs` | `/app/logs` | Папки `REN-*` для ручного `logs_path` |
+| `CASEONE_HOST_DIR` из `env/docker.env` | `/caseone` | Код/конфиги caseone (только чтение) |
+
+**Логи в форме (Docker):** `/app/logs/REN-MSKCASPRO01_2026-04-23` или оставьте путь из диалога (`temp/incidents/<id>` после загрузки архива).
+
+**Caseone в форме (Docker):** только `/caseone` или `/caseone/…` (не Windows-пути).
+
+**Локально:** `logs/…`, `temp/incidents/<id>`, `temp/caseone`.
+
+Проверка после старта: `GET /api/health` — `logs_dir`, список `ren_log_dirs`, `caseone_exists`, настройки Ollama.
+
+Приоритетные файлы в отчётах помечены ★: `RequestLoggingMiddleware.log`, `global.log`, `WorkflowTrace.log`.
+
+## Диалог (основной сценарий UI)
+
+| Метод | Путь |
+|-------|------|
+| `POST` | `/api/incident/dialog/start` — новый инцидент, опционально файлы |
+| `POST` | `/api/incident/dialog/{id}/message` — сообщение / уточнение |
+| `POST` | `/api/incident/dialog/{id}/artifacts` — дозагрузка zip/логов |
+| `GET` | `/api/incident/dialog/{id}` — состояние диалога |
+
+После шага 0: `POST /api/incident/process` с `intent_table`, `logs_path`, `caseone_path`.
+
+## API (отладка и интеграции)
 
 ### `POST /api/intent-table`
 
 ```json
 {
   "incident_description": "15.05 с 14:00 до 15:30 отчёт долго формировался, в конце таймаут",
-  "logs_path": "D:\\RAG\\poc\\temp\\incidents\\example-id\\logs",
-  "caseone_path": "D:\\RAG\\poc\\temp\\caseone"
+  "logs_path": "/app/logs/REN-MSKCASPRO01_2026-05-15",
+  "caseone_path": "/caseone"
 }
 ```
 
-### `POST /api/filter-logs`
+### `POST /api/filter-logs` (шаг 1)
 
-Шаги 1–2: рекурсивный список `*.log` + подсчёт строк по `log_search_patterns`.
+Рекурсивный список `*.log` + срез по `log_search_patterns`.
 
 ```json
 {
-  "logs_path": "D:\\RAG\\poc\\temp\\incidents\\example-id\\logs",
+  "logs_path": "/app/logs/REN-MSKCASPRO01_2026-05-15",
   "log_search_patterns": ["2026-05-15 14:", "2026-05-15 15:"],
-  "caseone_path": "D:\\RAG\\poc\\temp\\caseone",
+  "caseone_path": "/caseone",
   "recursive": true,
   "max_depth": null
 }
 ```
 
-- `recursive: true` (по умолчанию) — все подкаталоги, например `case1.renins.com\\global.log`.
-- `max_depth: 0` — только файлы в корне `logs_path`; `null` — без ограничения.
+- `recursive: true` (по умолчанию) — все подкаталоги.
+- `max_depth: 0` — только корень `logs_path`; `null` — без ограничения.
 - Можно передать путь к одному файлу `.log`.
+- Пропускаются служебные каталоги: `.git`, `node_modules`, `bin`, `obj` и т.п.
 
-Пропускаются служебные каталоги: `.git`, `node_modules`, `bin`, `obj` и т.п.
+### `POST /api/symptom-search` (шаг 2) и `POST /api/slow-requests` (шаг 3)
 
-### `POST /api/symptom-search` и `POST /api/slow-requests`
-
-Обязательно передать **`time_window_lines`** из ответа `filter-logs` (шаги 1–2).
+Обязательно передать **`time_window_lines`** из ответа `filter-logs`.
 
 ```json
 {
-  "logs_path": "D:\\RAG\\poc\\temp\\incidents\\example-id\\logs",
+  "logs_path": "/app/logs/REN-MSKCASPRO01_2026-05-15",
   "log_search_patterns": ["2026-05-15 14:"],
   "time_window_lines": [
-    { "file": "host.example.com/global.log", "line_number": 42, "text": "…" }
+    { "file": "case1.renins.com/global.log", "line_number": 42, "text": "…" }
   ],
   "search_keywords": ["отчёт", "Timeout", "/api/reports"]
 }
 ```
 
-Шаг 4 дополнительно: `min_duration_ms`, `top_n`, `http_access_only` (только строки, распознанные как HTTP/access).
+Шаг 3 (slow): дополнительно `min_duration_ms`, `top_n`, `http_access_only`.
 
-### `POST /api/correlate-errors`
-
-Шаг 5: ошибки во **всех файлах** среза + корреляция с `slow_requests` (±`correlation_window_sec`, по умолчанию 90 с).
+### `POST /api/correlate-errors` (шаг 4)
 
 ```json
 {
-  "logs_path": "D:\\RAG\\poc\\temp\\incidents\\example-id\\logs",
+  "logs_path": "/app/logs/REN-MSKCASPRO01_2026-05-15",
   "log_search_patterns": ["2026-05-15 14:"],
   "time_window_lines": [],
   "slow_requests": [],
@@ -103,59 +150,68 @@ python -m uvicorn app:app --host 0.0.0.0 --port 8090
 }
 ```
 
-Категории задаются в `incident_intent/error_rules.yaml` (MSSQL, PostgreSQL, nginx, IIS, .NET app + `generic_error`).
+Категории ошибок: `incident_intent/error_rules.yaml`.
 
-### `POST /api/incident/process`
-
-Шаги 1–8 последовательно на сервере. Тело: `intent_table`, `logs_path`, `caseone_path`, опционально `incident_id`. Ответ: `steps[]` (журнал), результаты шагов, `filter_summary` (без тяжёлого среза в JSON).
-
-Отдельные endpoint'ы (`/api/filter-logs`, …) сохранены для отладки.
+### `POST /api/incident/process` (шаги 1–8)
 
 ```json
 {
-  "intent_table": { },
-  "filter_summary": {
-    "total_matching_lines": 1200,
-    "time_window_line_count": 800,
-    "time_window_truncated": false,
-    "files_in_window": ["case1.renins.com/global.log"],
-    "patterns_used": ["2026-05-15 14:"]
-  },
-  "symptom_search": null,
-  "slow_requests": null,
-  "error_correlation": null,
+  "intent_table": {},
+  "logs_path": "/app/logs/REN-MSKCASPRO01_2026-05-15",
+  "caseone_path": "/caseone",
+  "incident_id": "optional-uuid",
   "max_evidence_samples": 20
 }
 ```
 
-Ответ: `conclusion_markdown`, `confidence` (`high`|`medium`|`low`), `confidence_reason`, `supported_by`, `not_proven`, `recommended_actions`, `raw_llm`.
+Ответ: `steps[]`, `filter_summary`, результаты шагов, `conclusion` (`conclusion_markdown`, `confidence`, …). Тяжёлый срез строк в JSON не дублируется — только `filter_summary`.
 
-Обязательно: шаги 1–2 (`filter_summary.time_window_line_count` > 0). Шаги 3–5 опциональны — в досье попадают только если были выполнены (`status: "ok"`).
-
-### Docker: монтирование путей
-
-В `docker-compose.yml` смонтированы:
-
-| Хост (Windows) | Контейнер |
-|----------------|-----------|
-| `D:/RAG` (`POC_LOGS_HOST_DIR`) | `/rag` |
-| `D:/RAG/tsrag/temp/uploads/caseone` (`POC_CASEONE_HOST_DIR`) | `/caseone` |
-
-В форме можно вводить **и Windows-пути** (`D:\RAG\REN-MSKCASPRO01_2026-04-23`), и пути контейнера (`/rag/REN-MSKCASPRO01_2026-04-23`) — приложение преобразует их автоматически.
-
-После `docker compose up --build` откройте http://localhost:8090 — внизу формы в `/api/health` видно, какие тома смонтированы и какие папки `REN-*` доступны.
-
-Если папка называется `REN-MSKCASPRO01_2026-04-23`, а не `REN-MSKCASPRO01` — укажите полное имя (подсказка появится в замечаниях).
-
-Приоритетные файлы в отчёте помечены ★: `RequestLoggingMiddleware.log`, `global.log`, `WorkflowTrace.log`.
+Также: `/api/analyze-workflow-trace`, `/api/analyze-client-logs`, `/api/index-caseone-config`, `/api/incident-conclusion`.
 
 ## Переменные окружения
 
+### Docker (`env/docker.env`)
+
+| Переменная | Назначение |
+|------------|------------|
+| `TSRAG_PORT` | Порт PoC на хосте (в контейнере всегда `8090`) |
+| `CASEONE_HOST_DIR` | Папка caseone на хосте → mount в `/caseone` |
+| `OLLAMA_BASE_URL` | URL Ollama для PoC (`http://ollama:11434` в compose) |
+| `OLLAMA_PORT` | Проброс Ollama на хост |
+| `OLLAMA_LISTEN` | Bind внутри контейнера ollama |
+| `OLLAMA_MODEL` | Модель для `ollama-init pull` и запросов PoC |
+| `OLLAMA_TIMEOUT_SEC` | Таймаут HTTP к Ollama |
+| `OLLAMA_NUM_CTX` | Размер контекста (`num_ctx`) |
+| `CUDA_VISIBLE_DEVICES`, `NVIDIA_VISIBLE_DEVICES` | GPU для сервиса ollama (опционально) |
+
+Логи: каталог `logs/` в проекте, mount задаётся в `docker-compose.yml` (`./logs` → `/app/logs`). Отдельная переменная не нужна.
+
+Шаблон: `env/docker.env.example`.
+
+### Локально (без compose)
+
 | Переменная | По умолчанию |
 |------------|----------------|
-| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` (в Docker: `http://tsrag-ollama:11434`) |
-| `OLLAMA_MODEL` | `llama3.1:8b-instruct-q6_K` |
+| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` |
+| `OLLAMA_MODEL` | `llama3.1:8b-instruct-q4_K_M` (~6 GiB RAM; `q6_K` — ≥10 GiB) |
 | `OLLAMA_TIMEOUT_SEC` | `1200` |
-| `OLLAMA_NUM_CTX` | `32768` — контекст Ollama (`num_ctx`) для шагов 0 и 6 |
-| `PORT` | `8090` |
-| `POC_LOGS_HOST_DIR` (docker-compose) | `D:/RAG` — каталог логов на хосте, монтируется в `/rag` |
+| `OLLAMA_NUM_CTX` | `8192` (при большом RAM можно `32768`) |
+| `PORT` | `8090` (uvicorn) |
+| `POC_TEMP_DIR` | `<корень проекта>/temp` |
+| `POC_LOGS_MOUNT` | в Docker задаётся compose: `/app/logs` |
+
+Опционально: `POC_PATH_MAP` — доп. правила `host=mount;…` для `resolve_host_path`; `POC_CASEONE_MAX_FILE_BYTES`, `POC_CASEONE_MAX_CONFIG_FILES` — лимиты индекса caseone.
+
+## Структура проекта
+
+```
+tsrag-poc/
+  app.py                 # FastAPI
+  compose.ps1 / compose.sh
+  docker-compose.yml
+  env/docker.env.example
+  incident_intent/       # шаги пайплайна, LLM, парсеры
+  logs/                  # REN-* для Docker mount
+  static/index.html      # UI
+  temp/                  # инциденты и загрузки
+```

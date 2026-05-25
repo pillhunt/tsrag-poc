@@ -13,14 +13,14 @@ class IntentTableRequest(BaseModel):
     )
     caseone_path: str | None = Field(
         default=None,
-        description="Путь к caseone",
+        description="Путь к caseone в контейнере (/caseone) или локально (temp/caseone)",
     )
     user_force_complete: bool = False
 
 
 class IntentField(BaseModel):
     value: str | None
-    source: Literal["user_text", "log_folder", "merged", "unknown"] = "unknown"
+    source: Literal["user_text", "merged", "unknown"] = "unknown"
     note: str | None = None
 
 

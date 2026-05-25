@@ -16,7 +16,6 @@ from incident_intent.dialog_parse import (
 from incident_intent.duration_utils import normalize_min_slow_request_ms
 from incident_intent.keyword_expand import expand_keywords_with_english
 from incident_intent.keyword_utils import normalize_search_keywords
-from incident_intent.log_folder import hint_from_logs_path
 from incident_intent.models import IntentField, IntentTable, IntentTableRequest, IntentTableResponse
 from incident_intent.ollama_client import OllamaError, chat_json
 from incident_intent.time_pattern_apply import apply_multi_format_patterns
@@ -42,24 +41,23 @@ def load_system_prompt() -> str:
     return _SYSTEM_PROMPT_FILE.read_text(encoding="utf-8").strip()
 
 
-def _build_user_prompt(req: IntentTableRequest, log_hint_iso: str | None) -> str:
+def _build_user_prompt(req: IntentTableRequest) -> str:
     parts = [
         "Описание инцидента от пользователя:",
         req.incident_description.strip(),
         "",
     ]
     if req.logs_path:
-        parts.append(f"Путь к логам (контекст): {req.logs_path.strip()}")
-        if log_hint_iso:
-            parts.append(
-                f"Подсказка: в пути логов уже извлечена дата {log_hint_iso} "
-                "(используй её, если в тексте нет другой даты)."
-            )
+        parts.append(
+            f"Путь к логам (только расположение файлов, не источник даты): {req.logs_path.strip()}"
+        )
     if req.caseone_path:
-        parts.append(f"Путь к caseone (контекст): {req.caseone_path.strip()}")
+        parts.append(
+            f"Путь к caseone (только расположение, не дата): {req.caseone_path.strip()}"
+        )
     parts.append(
-        "\nЕсли в описании нет даты, но есть подсказка из пути логов — incident_date = эта дата, "
-        "incident_date_source = user_text не подходит, в notes укажи что дата взята из пути."
+        "\nДату инцидента (incident_date) выводи только из описания/диалога пользователя, "
+        "не из пути к логам. Если даты нет во входе — incident_date = null."
     )
     if "Пользователь:" in req.incident_description and "Ассистент:" in req.incident_description:
         parts.append(
@@ -70,27 +68,11 @@ def _build_user_prompt(req: IntentTableRequest, log_hint_iso: str | None) -> str
     return "\n".join(parts)
 
 
-def _merge_date(
-    llm_date: str | None,
-    llm_source: str,
-    folder_date: str | None,
-) -> tuple[IntentField, list[str]]:
-    notes: list[str] = []
-    if folder_date and llm_date and folder_date != llm_date:
-        notes.append(
-            f"Дата в тексте/модели ({llm_date}) не совпадает с датой из папки логов ({folder_date}). "
-            "Нужно уточнение у пользователя."
-        )
-        return (
-            IntentField(value=None, source="unknown", note="; ".join(notes)),
-            notes,
-        )
-    if folder_date:
-        return IntentField(value=folder_date, source="log_folder", note="Из имени папки логов"), notes
+def _date_from_llm(llm_date: str | None, llm_source: str) -> IntentField:
     if llm_date:
         src = "user_text" if llm_source == "user_text" else "unknown"
-        return IntentField(value=llm_date, source=src), notes
-    return IntentField(value=None, source="unknown"), notes
+        return IntentField(value=llm_date, source=src)
+    return IntentField(value=None, source="unknown")
 
 
 def _parse_optional_float(value: Any) -> float | None:
@@ -142,18 +124,13 @@ def _pick_one_question(questions: list[str]) -> list[str]:
     return cleaned[:1]
 
 
-def _table_from_llm(
-    raw: dict[str, Any],
-    req: IntentTableRequest,
-    folder_date: str | None,
-) -> IntentTable:
+def _table_from_llm(raw: dict[str, Any], req: IntentTableRequest) -> IntentTable:
     llm_date = raw.get("incident_date")
     if llm_date in ("null", "", None):
         llm_date = None
-    date_field, merge_notes = _merge_date(
+    date_field = _date_from_llm(
         llm_date,
         str(raw.get("incident_date_source") or "unknown"),
-        folder_date,
     )
 
     tw_start = raw.get("time_window_start")
@@ -177,11 +154,7 @@ def _table_from_llm(
         patterns = hour_patterns(date_field.value, tw_start, tw_end)
 
     notes = list(raw.get("notes") or [])
-    notes.extend(merge_notes)
     notes.extend(pad_notes)
-    log_hint = hint_from_logs_path(req.logs_path)
-    if log_hint and log_hint.note and log_hint.iso_date is None:
-        notes.append(log_hint.note)
 
     missing = list(raw.get("missing_fields") or [])
     questions = _pick_one_question(list(raw.get("clarifying_questions") or []))
@@ -208,9 +181,7 @@ def _table_from_llm(
             ]
 
         if date_field.value is None and not questions:
-            questions = [
-                "Уточните дату инцидента (ДД.ММ.ГГГГ) или загрузите логи с датой в имени папки."
-            ]
+            questions = ["Уточните дату инцидента (ДД.ММ.ГГГГ)."]
         if (tw_start is None or tw_end is None) and not questions:
             questions = [
                 "Уточните интервал времени (с … до …) или одну метку времени в локальном часовом поясе."
@@ -365,13 +336,10 @@ def _resolve_status(table: IntentTable, req: IntentTableRequest) -> str:
 
 
 async def build_intent_table(req: IntentTableRequest) -> IntentTableResponse:
-    log_hint = hint_from_logs_path(req.logs_path)
-    folder_date = log_hint.iso_date if log_hint else None
-
     try:
         raw = await chat_json(
             load_system_prompt(),
-            _build_user_prompt(req, folder_date),
+            _build_user_prompt(req),
         )
     except OllamaError as exc:
         return IntentTableResponse(
@@ -379,7 +347,7 @@ async def build_intent_table(req: IntentTableRequest) -> IntentTableResponse:
             clarifying_questions=[str(exc)],
         )
 
-    table = _table_from_llm(raw, req, folder_date)
+    table = _table_from_llm(raw, req)
     _enrich_table_from_dialog(table, req)
     expanded_kw, kw_notes = expand_keywords_with_english(table.search_keywords)
     if expanded_kw and expanded_kw != table.search_keywords:

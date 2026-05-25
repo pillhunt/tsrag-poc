@@ -2,3 +2,9 @@ __pycache__/
 *.pyc
 temp/incidents/*/
 !temp/incidents/.gitkeep
+logs/*
+!logs/.gitkeep
+docs/.$*
+*.drawio.bkp
+*.drawio.dtmp
+env/docker.env

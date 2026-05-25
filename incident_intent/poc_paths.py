@@ -7,6 +7,9 @@ from pathlib import Path
 
 _POC_ROOT = Path(__file__).resolve().parent.parent
 
+# Точка монтирования caseone в Docker (совпадает с target в docker-compose)
+CASEONE_CONTAINER_PATH = "/caseone"
+
 
 def poc_root() -> Path:
     return _POC_ROOT
@@ -19,10 +22,31 @@ def temp_dir() -> Path:
     return base
 
 
+def logs_dir() -> Path:
+    """Каталог логов REN-*: ./logs на хосте, /app/logs в Docker."""
+    raw = os.getenv("POC_LOGS_MOUNT", "").strip()
+    if raw:
+        path = Path(raw)
+    elif Path("/.dockerenv").exists():
+        path = Path("/app/logs")
+    else:
+        path = _POC_ROOT / "logs"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def caseone_dir() -> Path:
     path = temp_dir() / "caseone"
     path.mkdir(parents=True, exist_ok=True)
     return path
+
+
+def default_caseone_path() -> str:
+    """Docker: смонтированный /caseone; локально — temp/caseone."""
+    mount = Path(CASEONE_CONTAINER_PATH)
+    if Path("/.dockerenv").exists() and mount.is_dir():
+        return str(mount)
+    return str(caseone_dir())
 
 
 def incidents_root() -> Path:
