@@ -20,7 +20,7 @@ class IntentTableRequest(BaseModel):
 
 class IntentField(BaseModel):
     value: str | None
-    source: Literal["user_text", "log_folder", "merged", "unknown"] = "unknown"
+    source: Literal["user_text", "merged", "unknown"] = "unknown"
     note: str | None = None
 
 

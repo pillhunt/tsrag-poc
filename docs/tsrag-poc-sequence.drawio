@@ -1,0 +1,376 @@
+<mxfile host="Electron" agent="tsrag-poc" pages="3">
+  <diagram id="step0-dialog" name="Шаг 0 — Диалог и intent table">
+    <mxGraphModel dx="2331" dy="544" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1600" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title0" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=1;fontSize=14;" value="PoC tsrag-poc: шаг 0 — диалог, загрузка логов, таблица намерений (Ollama)" vertex="1">
+          <mxGeometry height="30" width="1000" x="200" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="p-user" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="Пользователь" vertex="1">
+          <mxGeometry height="80" width="40" x="60" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p-ui" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Web UI&#xa;(index.html)" vertex="1">
+          <mxGeometry height="50" width="110" x="180" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p-api" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="FastAPI&#xa;(app.py)" vertex="1">
+          <mxGeometry height="50" width="110" x="340" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p-dialog" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Сервис диалога&lt;br&gt;(dialog_service)" vertex="1">
+          <mxGeometry height="50" width="130" x="500" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p-extract" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Сборщик промпта&lt;br&gt;(extractor.py)" vertex="1">
+          <mxGeometry height="50" width="120" x="680" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p-ollama" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Локальная LLM&lt;br&gt;(ollama_client)" vertex="1">
+          <mxGeometry height="50" width="110" x="860" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p-fs" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Обработка артефактов&lt;br&gt;(temp/incidents)" vertex="1">
+          <mxGeometry height="50" width="110" x="1020" y="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-user" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:&quot;0&quot;,&quot;rounded&quot;:&quot;0&quot;};" vertex="1">
+          <mxGeometry height="930" width="10" x="75" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-ui" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:&quot;0&quot;,&quot;rounded&quot;:&quot;0&quot;};" vertex="1">
+          <mxGeometry height="930" width="10" x="230" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-api" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:&quot;0&quot;,&quot;rounded&quot;:&quot;0&quot;};" vertex="1">
+          <mxGeometry height="930" width="10" x="390" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-dialog" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:&quot;0&quot;,&quot;rounded&quot;:&quot;0&quot;};" vertex="1">
+          <mxGeometry height="930" width="10" x="560" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-extract" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:&quot;0&quot;,&quot;rounded&quot;:&quot;0&quot;};" vertex="1">
+          <mxGeometry height="930" width="10" x="735" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-ollama" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:&quot;0&quot;,&quot;rounded&quot;:&quot;0&quot;};" vertex="1">
+          <mxGeometry height="930" width="10" x="910" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-fs" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:&quot;0&quot;,&quot;rounded&quot;:&quot;0&quot;};" vertex="1">
+          <mxGeometry height="930" width="10" x="1070" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="m1" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=horizontal;curved=0;rounded=0;" value="1. Описание инцидента&lt;br&gt;и файлы (.log / .zip)">
+          <mxGeometry relative="1" x="0.0018" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="90" y="220" />
+              <mxPoint x="235" y="-195" />
+            </Array>
+            <mxPoint x="85" y="220" as="sourcePoint" />
+            <mxPoint x="230" y="220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m2" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" value="2. Запрос с описанием&lt;br&gt;инцидента&lt;br&gt;POST /api/incident/dialog/start&lt;br&gt;(FormData: message, files)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="280.05" as="sourcePoint" />
+            <mxPoint x="390" y="280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m3" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" value="3. Инициализация диалога&lt;br&gt;с LLM для формирования&lt;br&gt;временных интервалов и&lt;br&gt;ключевых слов">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="400" y="320" as="sourcePoint" />
+            <mxPoint x="570" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m4" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" value="4. Сохранение и распаковка &lt;br&gt;артефактов инцидента">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="565" y="380" as="sourcePoint" />
+            <mxPoint x="1075" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m4r" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" value="Атрибуты сохранённых&lt;br&gt;инцидентов">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1075" y="420" as="sourcePoint" />
+            <mxPoint x="565" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m5" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" value="5. Получение таблицы&lt;br&gt;намерений агента">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="565" y="480" as="sourcePoint" />
+            <mxPoint x="740" y="480" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m6" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" value="6. (удалено) дата только из текста пользователя">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="740" y="540" as="sourcePoint" />
+            <mxPoint x="1075" y="540" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m7" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" value="7. Запрос к LLM для&lt;br&gt;формирования таблицы">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="740" y="620" as="sourcePoint" />
+            <mxPoint x="915" y="620" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m7r" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" value="JSON: дата, окно, search_keywords,&#xa;log_search_patterns, clarifying_questions">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="915" y="700" as="sourcePoint" />
+            <mxPoint x="740" y="700" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m8" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" value="8. merge даты (папка vs LLM), hour_patterns,&#xa;expand_keywords, status complete | needs_clarification">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="740" y="780" as="sourcePoint" />
+            <mxPoint x="565" y="780" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m9" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" value="9. ответ ассистента (уточнение или «Обработать инцидент»)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="565" y="860" as="sourcePoint" />
+            <mxPoint x="235" y="860" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m10" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" value="10. intent_status === complete → кнопка «Обработать инцидент»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="240" y="920" as="sourcePoint" />
+            <mxPoint x="85" y="920" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="steps1-8-pipeline" name="Шаги 1–8 — Пайплайн обработки">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="2200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title1" value="PoC tsrag-poc: шаги 1–8 — POST /api/incident/process (run_incident_pipeline)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="200" y="20" width="1100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-user" value="Пользователь" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="40" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-ui" value="Web UI" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="140" y="80" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-api" value="FastAPI" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="280" y="80" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-pipe" value="Pipeline&#xa;(pipeline.py)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="420" y="80" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-logs" value="Анализ логов&#xa;(filter, symptom, slow,&#xa;errors, workflow, client)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="580" y="70" width="150" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-case" value="CaseOne&#xa;index" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="780" y="80" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-concl" value="IncidentConclusion" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="920" y="80" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-ollama" value="Ollama" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="80" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="p2-fs" value="ФС логов" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1230" y="80" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ll2-user" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;" vertex="1" parent="1">
+          <mxGeometry x="55" y="150" width="10" height="1900" as="geometry" />
+        </mxCell>
+        <mxCell id="ll2-ui" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;" vertex="1" parent="1">
+          <mxGeometry x="180" y="150" width="10" height="1900" as="geometry" />
+        </mxCell>
+        <mxCell id="ll2-api" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;" vertex="1" parent="1">
+          <mxGeometry x="320" y="150" width="10" height="1900" as="geometry" />
+        </mxCell>
+        <mxCell id="ll2-pipe" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;" vertex="1" parent="1">
+          <mxGeometry x="470" y="150" width="10" height="1900" as="geometry" />
+        </mxCell>
+        <mxCell id="ll2-logs" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;" vertex="1" parent="1">
+          <mxGeometry x="650" y="150" width="10" height="1900" as="geometry" />
+        </mxCell>
+        <mxCell id="ll2-case" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;" vertex="1" parent="1">
+          <mxGeometry x="820" y="150" width="10" height="1900" as="geometry" />
+        </mxCell>
+        <mxCell id="ll2-concl" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;" vertex="1" parent="1">
+          <mxGeometry x="975" y="150" width="10" height="1900" as="geometry" />
+        </mxCell>
+        <mxCell id="ll2-ollama" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;" vertex="1" parent="1">
+          <mxGeometry x="1130" y="150" width="10" height="1900" as="geometry" />
+        </mxCell>
+        <mxCell id="ll2-fs" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;portConstraint=eastwest;" vertex="1" parent="1">
+          <mxGeometry x="1270" y="150" width="10" height="1900" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" value="«Обработать инцидент»" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="60" y="200" as="sourcePoint" />
+            <mxPoint x="185" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s2" value="POST /api/incident/process&#xa;{ intent_table, logs_path, caseone_path }" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="185" y="260" as="sourcePoint" />
+            <mxPoint x="325" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s3" value="resolve_host_path() (Docker: D:\\ → /rag/)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="325" y="320" as="sourcePoint" />
+            <mxPoint x="475" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s4" value="run_incident_pipeline()" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="325" y="360" as="sourcePoint" />
+            <mxPoint x="475" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s5" value="Шаг 1: filter_logs() — срез по log_search_patterns,&#xa;time_window_lines + slow_time_window_lines" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="475" y="420" as="sourcePoint" />
+            <mxPoint x="655" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s5fs" value="чтение *.log рекурсивно" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="655" y="460" as="sourcePoint" />
+            <mxPoint x="1275" y="460" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s6" value="Шаг 2: search_symptoms() — только time_window_lines" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="475" y="520" as="sourcePoint" />
+            <mxPoint x="655" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s6skip" value="[alt] нет search_keywords → skipped" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="655" y="560" as="sourcePoint" />
+            <mxPoint x="475" y="560" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s7" value="Шаг 3: find_slow_requests() — HTTP/access, min_duration_ms" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="475" y="620" as="sourcePoint" />
+            <mxPoint x="655" y="620" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s8" value="Шаг 4: correlate_errors() + slow_requests (±90s)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="475" y="680" as="sourcePoint" />
+            <mxPoint x="655" y="680" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s9" value="Шаг 5: analyze_workflow_trace()" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="475" y="740" as="sourcePoint" />
+            <mxPoint x="655" y="740" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s10" value="Шаг 6: analyze_client_logs()" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="475" y="800" as="sourcePoint" />
+            <mxPoint x="655" y="800" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s11" value="Шаг 7: index_caseone_config()" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="475" y="860" as="sourcePoint" />
+            <mxPoint x="825" y="860" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s11skip" value="[alt] caseone_path пуст → skipped" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontColor=#666666;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="825" y="900" as="sourcePoint" />
+            <mxPoint x="475" y="900" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s12" value="run_pipeline_sync() → PipelineResponse (без LLM)" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="655" y="960" as="sourcePoint" />
+            <mxPoint x="475" y="960" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s13" value="Шаг 8: build_incident_conclusion()&#xa;evidence_bundle + enrich_conclusion_request" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="475" y="1040" as="sourcePoint" />
+            <mxPoint x="980" y="1040" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s14" value="chat_json(incident_conclusion_system.md)" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="980" y="1100" as="sourcePoint" />
+            <mxPoint x="1135" y="1100" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s14r" value="conclusion_markdown, confidence,&#xa;supported_by, recommended_actions" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1135" y="1180" as="sourcePoint" />
+            <mxPoint x="980" y="1180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s15" value="slim_filter_for_client() — убрать time_window_lines из JSON" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="475" y="1260" as="sourcePoint" />
+            <mxPoint x="325" y="1260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s16" value="PipelineResponse: steps[], conclusion, filter_summary" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="325" y="1320" as="sourcePoint" />
+            <mxPoint x="185" y="1320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="s17" value="журнал шагов + markdown заключение" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="185" y="1380" as="sourcePoint" />
+            <mxPoint x="60" y="1380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="note1" value="Отладочные endpoint&#39;ы (по отдельности):&#xa;/api/filter-logs, /api/symptom-search, /api/slow-requests,&#xa;/api/correlate-errors, /api/incident-conclusion&#xa;&#xa;Шаги 3–5 в UI-режиме отладки требуют time_window_lines из filter-logs." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#fff2cc;strokeColor=#d6b656;size=14;align=left;" vertex="1" parent="1">
+          <mxGeometry x="140" y="1450" width="380" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="frame" value="run_pipeline_sync — синхронно, без повторного чтения логов после шага 1" style="shape=umlFrame;whiteSpace=wrap;html=1;width=120;height=30;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="400" y="390" width="320" height="590" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="overview" name="Обзор архитектуры">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ov-title" value="tsrag-poc — компоненты" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="400" y="30" width="400" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-user" value="Пользователь" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="120" width="40" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-ui" value="static/index.html&#xa;:8090" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="130" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-app" value="FastAPI app.py&#xa;uvicorn" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="420" y="130" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-mod" value="incident_intent/&#xa;pipeline, extractor, log_*, dialog_*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="640" y="120" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-ollama" value="Ollama&#xa;(Docker shared-network)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="900" y="130" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-fs" value="Логи / caseone&#xa;(volume mount)" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="640" y="280" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="endArrow=block;html=1;" edge="1" parent="1" source="ov-user" target="ov-ui">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="endArrow=block;html=1;" edge="1" parent="1" source="ov-ui" target="ov-app">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="endArrow=block;html=1;" edge="1" parent="1" source="ov-app" target="ov-mod">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="шаг 0, 8" style="endArrow=block;html=1;" edge="1" parent="1" source="ov-mod" target="ov-ollama">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="шаги 1–7" style="endArrow=block;html=1;" edge="1" parent="1" source="ov-mod" target="ov-fs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ov-legend" value="Шаг 0: intent table (дата, окно, keywords, patterns)&#xa;Шаги 1–8: один POST /api/incident/process&#xa;HITL: не реализован" style="text;html=1;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=8;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="200" y="400" width="500" height="70" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
