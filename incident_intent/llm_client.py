@@ -8,27 +8,26 @@ from typing import Any
 from incident_intent import hf_client, ollama_client
 from incident_intent.llm_json import LLMError
 
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama").strip().lower() or "ollama"
-
 # Обратная совместимость
 OllamaError = LLMError
 
 
 def get_llm_provider() -> str:
-    return LLM_PROVIDER
+    return os.getenv("LLM_PROVIDER", "ollama").strip().lower() or "ollama"
 
 
 def llm_config_summary() -> dict[str, Any]:
-    if LLM_PROVIDER == "hf":
+    provider = get_llm_provider()
+    if provider == "hf":
         return {
             "provider": "hf",
             "configured": hf_client.is_hf_configured(),
-            "inference_url": hf_client.HF_INFERENCE_URL or None,
-            "model": hf_client.HF_MODEL or None,
+            "inference_url": hf_client._hf_inference_url() or None,
+            "model": hf_client._hf_model() or None,
             "api_style": hf_client.resolve_hf_api_style(),
-            "token_set": bool(hf_client.HF_TOKEN),
-            "timeout_sec": hf_client.HF_TIMEOUT_SEC,
-            "max_new_tokens": hf_client.HF_MAX_NEW_TOKENS,
+            "token_set": bool(hf_client._hf_token()),
+            "timeout_sec": hf_client._hf_timeout_sec(),
+            "max_new_tokens": hf_client._hf_max_new_tokens(),
         }
     return {
         "provider": "ollama",
@@ -43,13 +42,16 @@ def llm_config_summary() -> dict[str, Any]:
 async def chat_json(
     system: str,
     user: str,
+    *,
+    json_hint: str | None = None,
     **kwargs: Any,
 ) -> dict[str, Any]:
-    if LLM_PROVIDER == "hf":
-        return await hf_client.chat_json(system, user, **kwargs)
-    if LLM_PROVIDER != "ollama":
+    provider = get_llm_provider()
+    if provider == "hf":
+        return await hf_client.chat_json(system, user, json_hint=json_hint, **kwargs)
+    if provider != "ollama":
         raise LLMError(
-            f"Неизвестный LLM_PROVIDER={LLM_PROVIDER!r}. "
+            f"Неизвестный LLM_PROVIDER={provider!r}. "
             "Допустимо: ollama, hf."
         )
-    return await ollama_client.chat_json(system, user, **kwargs)
+    return await ollama_client.chat_json(system, user, json_hint=json_hint, **kwargs)

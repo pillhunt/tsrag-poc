@@ -8,6 +8,12 @@ import asyncio
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+_APP_DIR = Path(__file__).resolve().parent
+load_dotenv(_APP_DIR / "env" / "docker.env")
+load_dotenv(_APP_DIR / ".env")
+
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -60,8 +66,7 @@ from incident_intent.slow_requests_models import SlowRequestsRequest, SlowReques
 from incident_intent.symptom_search import search_symptoms
 from incident_intent.symptom_search_models import SymptomSearchRequest, SymptomSearchResponse
 
-APP_DIR = Path(__file__).resolve().parent
-STATIC_DIR = APP_DIR / "static"
+STATIC_DIR = _APP_DIR / "static"
 
 app = FastAPI(title="Incident Intent PoC", version="0.2.0")
 

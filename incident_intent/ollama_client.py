@@ -5,7 +5,11 @@ from typing import Any
 
 import httpx
 
-from incident_intent.llm_json import LLMError, extract_json_object
+from incident_intent.llm_json import (
+    LLMError,
+    extract_conclusion_json,
+    extract_intent_table_json,
+)
 
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b-instruct-q4_K_M")
@@ -30,6 +34,7 @@ async def chat_json(
     model: str | None = None,
     timeout_sec: float | None = None,
     num_ctx: int | None = None,
+    json_hint: str | None = None,
 ) -> dict[str, Any]:
     base = (base_url or DEFAULT_BASE_URL).rstrip("/")
     model_name = model or DEFAULT_MODEL
@@ -69,4 +74,6 @@ async def chat_json(
     data = response.json()
     message = data.get("message") or {}
     content = message.get("content") or ""
-    return extract_json_object(content)
+    if json_hint == "conclusion":
+        return extract_conclusion_json(content)
+    return extract_intent_table_json(content)

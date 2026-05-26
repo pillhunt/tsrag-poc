@@ -347,6 +347,7 @@ async def build_intent_table(req: IntentTableRequest) -> IntentTableResponse:
         raw = await chat_json(
             load_system_prompt(),
             _build_user_prompt(req),
+            json_hint="intent",
         )
     except LLMError as exc:
         return IntentTableResponse(

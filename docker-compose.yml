@@ -53,11 +53,10 @@ services:
     container_name: incident-intent-poc
     ports:
       - "${TSRAG_PORT}:8090"
+    # Все настройки PoC (LLM_PROVIDER, HF_*, CONFLUENCE_*, OLLAMA_*) — из env/docker.env
+    env_file:
+      - env/docker.env
     environment:
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
-      OLLAMA_MODEL: ${OLLAMA_MODEL}
-      OLLAMA_TIMEOUT_SEC: ${OLLAMA_TIMEOUT_SEC}
-      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX}
       POC_LOGS_MOUNT: /app/logs
     volumes:
       - ./temp:/app/temp

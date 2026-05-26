@@ -64,15 +64,22 @@ HITL не реализован.
 | `HF_TOKEN` | Read token с [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
 | `HF_MODEL` | Имя модели для chat API (для URL `.../models/<id>` можно не задавать) |
 | `HF_API_STYLE` | `auto` \| `chat` \| `generate` — формат запроса |
-| `HF_TIMEOUT_SEC`, `HF_MAX_NEW_TOKENS` | Таймаут и лимит ответа |
+| `HF_TIMEOUT_SEC`, `HF_MAX_NEW_TOKENS` | Таймаут и лимит ответа (меньше токенов — меньше 504 на router) |
+| `HF_MAX_RETRIES`, `HF_RETRY_BACKOFF_SEC` | Повторы при 504/502/503/429 |
+
+**Формат запроса** — как в [документации HF router](https://huggingface.co/docs): `POST` + `Authorization: Bearer` + JSON `{ "model", "messages" }`.
+
+**Формат ответа** — `choices[0].message.content` (JSON) и у Qwen часто пустой `content` + длинный `message.reasoning`. PoC читает оба поля; при `finish_reason: "length"` и отсутствии `{…}` в тексте — явная ошибка (увеличьте `HF_MAX_NEW_TOKENS`, `HF_ENABLE_THINKING=false`).
 
 **Примеры `HF_INFERENCE_URL`:**
 
-- Serverless Inference API: `https://api-inference.huggingface.co/models/<org>/<model>`
-- OpenAI-совместимый router: `https://router.huggingface.co/v1/chat/completions`
-- Dedicated Endpoint (TGI): `https://<id>.endpoints.huggingface.cloud/v1/chat/completions`
+- **Router (рекомендуется для примера с Qwen):** `https://router.huggingface.co/v1/chat/completions` + `HF_MODEL=Qwen/Qwen3.5-9B:together`
+- Serverless Inference API: `https://api-inference.huggingface.co/models/<org>/<model>` (`HF_API_STYLE=generate`)
+- Dedicated Endpoint: `https://<id>.endpoints.huggingface.cloud/v1/chat/completions`
 
-Проверка: `GET /api/health` → блок `llm` (`provider`, `configured`, URL/модель).
+Проверка: `GET /api/health` → блок `llm` (`provider`, `configured`, URL/модель). Должно быть `"provider": "hf"`.
+
+**Docker:** переменные из `env/docker.env` попадают в контейнер через `env_file` в `docker-compose.yml`. После смены `LLM_PROVIDER` пересоздайте контейнер: `.\compose.ps1 up -d --force-recreate incident-intent-poc`.
 
 ## Confluence (Wiki)
 

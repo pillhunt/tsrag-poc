@@ -77,7 +77,11 @@ async def build_incident_conclusion(
     )
 
     try:
-        raw = await chat_json(load_conclusion_prompt(), user_message)
+        raw = await chat_json(
+            load_conclusion_prompt(),
+            user_message,
+            json_hint="conclusion",
+        )
     except LLMError as exc:
         return IncidentConclusionResponse(
             status="error",
