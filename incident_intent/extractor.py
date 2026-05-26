@@ -17,7 +17,7 @@ from incident_intent.duration_utils import normalize_min_slow_request_ms
 from incident_intent.keyword_expand import expand_keywords_with_english
 from incident_intent.keyword_utils import normalize_search_keywords
 from incident_intent.models import IntentField, IntentTable, IntentTableRequest, IntentTableResponse
-from incident_intent.ollama_client import OllamaError, chat_json
+from incident_intent.llm_client import LLMError, chat_json
 from incident_intent.time_pattern_apply import apply_multi_format_patterns
 from incident_intent.time_window_utils import (
     expand_single_time_window,
@@ -348,7 +348,7 @@ async def build_intent_table(req: IntentTableRequest) -> IntentTableResponse:
             load_system_prompt(),
             _build_user_prompt(req),
         )
-    except OllamaError as exc:
+    except LLMError as exc:
         return IntentTableResponse(
             status="needs_clarification",
             clarifying_questions=[str(exc)],

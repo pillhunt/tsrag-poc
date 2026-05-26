@@ -701,12 +701,17 @@
         const r = await fetch("/api/health");
         const h = await r.json();
         const p = h.paths || {};
-        modelName.textContent = h.ollama_model;
+        const llm = h.llm || {};
+        const prov = llm.provider || "ollama";
+        modelName.textContent = llm.model || h.ollama_model || "?";
+        const llmLine = prov === "hf"
+          ? `HF: <code>${(llm.inference_url || "?").replace(/</g, "&lt;")}</code>`
+          : `Ollama: ${h.ollama_base_url || llm.base_url || "?"}`;
         const dirs = (p.log_mount_dirs || []).length
           ? ` · каталоги: ${p.log_mount_dirs.slice(0, 3).join(", ")}`
           : (p.logs_dir_exists ? " · logs/ пуст" : " · logs ✗");
         healthMeta.innerHTML =
-          `Ollama: ${h.ollama_base_url} · logs: <code>${p.logs_dir || "?"}</code>${dirs}` +
+          `${llmLine} · logs: <code>${p.logs_dir || "?"}</code>${dirs}` +
           (p.caseone_exists ? " · caseone ✓" : " · caseone ✗ (Docker: /caseone)");
       } catch {
         healthMeta.textContent = "Не удалось получить /api/health";

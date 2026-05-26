@@ -51,6 +51,7 @@ from incident_intent.incident_conclusion import build_incident_conclusion
 from incident_intent.log_filter import filter_logs
 from incident_intent.log_filter_models import FilterLogsRequest, FilterLogsResponse
 from incident_intent.models import IntentTableRequest, IntentTableResponse
+from incident_intent.llm_client import llm_config_summary
 from incident_intent.ollama_client import DEFAULT_BASE_URL, DEFAULT_MODEL, DEFAULT_NUM_CTX
 from incident_intent.path_resolve import is_docker_runtime, resolve_host_path
 from incident_intent.poc_paths import caseone_dir, incidents_root, logs_dir, temp_dir
@@ -88,10 +89,14 @@ async def health() -> dict:
         reverse=True,
     )[:10]
 
+    llm = llm_config_summary()
     return {
-        "ollama_base_url": os.getenv("OLLAMA_BASE_URL", DEFAULT_BASE_URL),
-        "ollama_model": os.getenv("OLLAMA_MODEL", DEFAULT_MODEL),
-        "ollama_num_ctx": int(os.getenv("OLLAMA_NUM_CTX", str(DEFAULT_NUM_CTX))),
+        "llm": llm,
+        "ollama_base_url": llm.get("base_url")
+        or os.getenv("OLLAMA_BASE_URL", DEFAULT_BASE_URL),
+        "ollama_model": llm.get("model") or os.getenv("OLLAMA_MODEL", DEFAULT_MODEL),
+        "ollama_num_ctx": llm.get("num_ctx")
+        or int(os.getenv("OLLAMA_NUM_CTX", str(DEFAULT_NUM_CTX))),
         "runtime": "docker" if is_docker_runtime() else "local",
         "paths": {
             "temp_dir": str(td),

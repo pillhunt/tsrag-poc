@@ -15,7 +15,7 @@ from incident_intent.conclusion_models import (
 )
 from incident_intent.context_analysis import enrich_conclusion_request
 from incident_intent.evidence_bundle import build_evidence_payload
-from incident_intent.ollama_client import OllamaError, chat_json
+from incident_intent.llm_client import LLMError, chat_json
 
 _PROMPTS_DIR = Path(__file__).resolve().parent / "prompts"
 _CONCLUSION_PROMPT = _PROMPTS_DIR / "incident_conclusion_system.md"
@@ -78,7 +78,7 @@ async def build_incident_conclusion(
 
     try:
         raw = await chat_json(load_conclusion_prompt(), user_message)
-    except OllamaError as exc:
+    except LLMError as exc:
         return IncidentConclusionResponse(
             status="error",
             errors=[str(exc)],

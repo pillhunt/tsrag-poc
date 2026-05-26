@@ -52,6 +52,28 @@ HITL не реализован.
 3. При необходимости — каталоги с логами в `./logs/` (любые имена)
 4. `.\compose.ps1 up --build` → http://localhost:8090 (`TSRAG_PORT`)
 
+## LLM (Ollama или Hugging Face)
+
+Шаги **0** (таблица намерений) и **11** (заключение LLM) вызывают модель через `incident_intent/llm_client.py`.
+
+| Переменная | Назначение |
+|------------|------------|
+| `LLM_PROVIDER` | `ollama` (по умолчанию) или `hf` |
+| `OLLAMA_*` | Локальный Ollama (см. `env/docker.env.example`) |
+| `HF_INFERENCE_URL` | **Полный URL** POST-запроса к модели на HF |
+| `HF_TOKEN` | Read token с [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
+| `HF_MODEL` | Имя модели для chat API (для URL `.../models/<id>` можно не задавать) |
+| `HF_API_STYLE` | `auto` \| `chat` \| `generate` — формат запроса |
+| `HF_TIMEOUT_SEC`, `HF_MAX_NEW_TOKENS` | Таймаут и лимит ответа |
+
+**Примеры `HF_INFERENCE_URL`:**
+
+- Serverless Inference API: `https://api-inference.huggingface.co/models/<org>/<model>`
+- OpenAI-совместимый router: `https://router.huggingface.co/v1/chat/completions`
+- Dedicated Endpoint (TGI): `https://<id>.endpoints.huggingface.cloud/v1/chat/completions`
+
+Проверка: `GET /api/health` → блок `llm` (`provider`, `configured`, URL/модель).
+
 ## Confluence (Wiki)
 
 Клиент: **[atlassian-python-api](https://atlassian-python-api.readthedocs.io/en/latest/confluence.html)** (`pip install atlassian-python-api`).
