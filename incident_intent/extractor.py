@@ -172,6 +172,9 @@ def _table_from_llm(raw: dict[str, Any], req: IntentTableRequest) -> IntentTable
         search_keywords = normalize_search_keywords(
             [str(k) for k in (raw.get("search_keywords") or []) if k]
         )
+        anchors = normalize_search_keywords(
+            [str(a) for a in (raw.get("anchors") or []) if a]
+        )
         if not search_keywords and "search_keywords" not in missing:
             missing.append("search_keywords")
         if not search_keywords and not questions:
@@ -189,6 +192,9 @@ def _table_from_llm(raw: dict[str, Any], req: IntentTableRequest) -> IntentTable
     else:
         search_keywords = normalize_search_keywords(
             [str(k) for k in (raw.get("search_keywords") or []) if k]
+        )
+        anchors = normalize_search_keywords(
+            [str(a) for a in (raw.get("anchors") or []) if a]
         )
 
     questions = _pick_one_question(questions)
@@ -210,6 +216,7 @@ def _table_from_llm(raw: dict[str, Any], req: IntentTableRequest) -> IntentTable
         time_window_end=IntentField(value=tw_end, source="user_text" if tw_end else "unknown"),
         symptoms=[str(s) for s in (raw.get("symptoms") or []) if s],
         search_keywords=search_keywords,
+        anchors=anchors,
         investigation_goal=str(
             raw.get("investigation_goal")
             or "Найти в логах долгие операции и ошибки сервера в указанном окне."

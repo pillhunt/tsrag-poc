@@ -17,6 +17,7 @@ def _intent_payload(table: IntentTable) -> dict[str, Any]:
         },
         "symptoms": table.symptoms,
         "search_keywords": table.search_keywords,
+        "anchors": table.anchors,
         "investigation_goal": table.investigation_goal,
         "min_slow_request_ms": table.min_slow_request_ms,
         "reported_duration_min_minutes": table.reported_duration_min_minutes,
@@ -71,7 +72,41 @@ def build_evidence_payload(req: IncidentConclusionRequest) -> dict[str, Any]:
         "step_workflow_trace": {"ran": False},
         "step_client_logs": {"ran": False},
         "step_caseone_config": {"ran": False},
+        "artifact_scan": {"ran": False},
+        "confluence": {"ran": False},
     }
+
+    if req.artifact_scan and req.artifact_scan.status == "ok":
+        sc = req.artifact_scan
+        payload["artifact_scan"] = {
+            "ran": True,
+            "narrow_line_count": sc.narrow_line_count,
+            "wide_line_count": sc.wide_line_count,
+            "anchors_for_search": sc.anchors_for_search[:25],
+            "discovered_anchors": sc.discovered_anchors[:25],
+            "keyword_hit_count": len(sc.keyword_hits),
+            "anchor_hit_count": len(sc.anchor_hits),
+            "prior_conclusions": sc.conclusions,
+        }
+
+    if req.confluence_search and req.confluence_search.status == "ok":
+        cf = req.confluence_search
+        top = cf.top_page
+        payload["confluence"] = {
+            "ran": True,
+            "found": cf.found,
+            "query_text": cf.query_text[:300],
+            "top_title": top.title if top else None,
+            "top_score": top.score if top else None,
+            "matched_anchors": top.matched_anchors[:15] if top else [],
+            "prior_conclusions": cf.conclusions,
+        }
+    elif req.confluence_search and req.confluence_search.status == "skipped":
+        payload["confluence"] = {
+            "ran": False,
+            "skipped": True,
+            "prior_conclusions": req.confluence_search.conclusions,
+        }
 
     if req.symptom_search and req.symptom_search.status == "ok":
         s3 = req.symptom_search

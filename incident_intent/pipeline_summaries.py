@@ -11,6 +11,8 @@ from incident_intent.e_analysis_models import (
 from incident_intent.error_correlation_models import CorrelateErrorsResponse
 from incident_intent.log_filter_models import FilterLogsResponse
 from incident_intent.slow_requests_models import SlowRequestsResponse
+from incident_intent.artifact_scan_models import ArtifactScanResponse
+from incident_intent.confluence_models import ConfluenceSearchResponse, PlaybookGateResponse
 from incident_intent.symptom_search_models import SymptomSearchResponse
 
 
@@ -47,6 +49,32 @@ def filter_summary_from_response(data: FilterLogsResponse) -> FilterSummary:
         slow_patterns_used=data.slow_patterns_used,
         time_filter_mode=data.time_filter_mode,
     )
+
+
+def artifact_scan_summary_lines(data: ArtifactScanResponse) -> list[str]:
+    if data.status == "error":
+        return data.errors[:3] or ["Ошибка скана артефактов."]
+    return (data.conclusions[:3] if data.conclusions else []) + [
+        f"Якорей для поиска: {len(data.anchors_for_search)}",
+    ]
+
+
+def confluence_summary_lines(data: ConfluenceSearchResponse) -> list[str]:
+    if data.status == "skipped":
+        return data.conclusions[:2] or ["Confluence не настроен."]
+    if data.status == "error":
+        return data.errors[:3] or ["Ошибка Confluence."]
+    if data.top_page:
+        return [
+            f"Статья: {data.top_page.title}",
+            f"Score: {data.top_page.score:.1f}",
+        ] + (data.conclusions[:1] if data.conclusions else [])
+    return data.conclusions[:2] or ["Статья не найдена."]
+
+
+def gate_summary_lines(data: PlaybookGateResponse) -> list[str]:
+    prefix = "Playbook" if data.use_playbook else "Полный разбор"
+    return [f"{prefix}: {data.reason}"]
 
 
 def symptom_summary_lines(data: SymptomSearchResponse) -> list[str]:
@@ -112,8 +140,9 @@ def caseone_summary_lines(data: CaseoneConfigIndexResponse) -> list[str]:
 
 def conclusion_summary_lines(data: IncidentConclusionResponse) -> list[str]:
     if data.status == "error":
-        return data.errors[:3] or ["Ошибка LLM."]
-    lines = [f"Уверенность: {data.confidence}"]
+        return data.errors[:3] or ["Ошибка заключения."]
+    src = "Confluence" if data.conclusion_source == "confluence" else "LLM"
+    lines = [f"Источник: {src}", f"Уверенность: {data.confidence}"]
     if data.confidence_reason:
         lines.append(data.confidence_reason[:240])
     lines.append(f"Поддержано фактами: {len(data.supported_by)} пунктов")

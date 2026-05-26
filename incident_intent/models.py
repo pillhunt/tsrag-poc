@@ -33,6 +33,10 @@ class IntentTable(BaseModel):
         default_factory=list,
         description="Подстроки для grep по содержимому логов (шаг 3), из LLM",
     )
+    anchors: list[str] = Field(
+        default_factory=list,
+        description="Узкие якоря сценария (API, SQL, exception) для скана логов и Confluence",
+    )
     investigation_goal: str
     optional_paths: dict[str, str | None] = Field(default_factory=dict)
     log_search_patterns: list[str] = Field(default_factory=list)

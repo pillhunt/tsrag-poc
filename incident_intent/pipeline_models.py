@@ -16,6 +16,8 @@ from incident_intent.error_correlation_models import CorrelateErrorsResponse
 from incident_intent.log_filter_models import FilterLogsResponse
 from incident_intent.models import IntentTable
 from incident_intent.slow_requests_models import SlowRequestsResponse
+from incident_intent.artifact_scan_models import ArtifactScanResponse
+from incident_intent.confluence_models import ConfluenceSearchResponse, PlaybookGateResponse
 from incident_intent.symptom_search_models import SymptomSearchResponse
 
 PipelineStepStatus = Literal["ok", "skipped", "error"]
@@ -41,6 +43,10 @@ class PipelineResponse(BaseModel):
     steps: list[PipelineStepLog] = Field(default_factory=list)
     filter_summary: FilterSummary | None = None
     filter: FilterLogsResponse | None = None
+    artifact_scan: ArtifactScanResponse | None = None
+    confluence_search: ConfluenceSearchResponse | None = None
+    playbook_gate: PlaybookGateResponse | None = None
+    use_playbook: bool = False
     symptom_search: SymptomSearchResponse | None = None
     slow_requests: SlowRequestsResponse | None = None
     error_correlation: CorrelateErrorsResponse | None = None

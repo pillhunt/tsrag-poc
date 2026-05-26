@@ -26,6 +26,11 @@ from incident_intent.e_analysis_models import (
     WorkflowTraceAnalysisRequest,
     WorkflowTraceAnalysisResponse,
 )
+from incident_intent.artifact_scan import scan_artifacts
+from incident_intent.artifact_scan_models import ArtifactScanRequest, ArtifactScanResponse
+from incident_intent.confluence_client import confluence_config_summary
+from incident_intent.confluence_models import ConfluenceSearchRequest, ConfluenceSearchResponse
+from incident_intent.confluence_search import search_confluence_playbooks
 from incident_intent.pipeline import run_incident_pipeline
 from incident_intent.pipeline_models import PipelineRequest, PipelineResponse
 from incident_intent.workflow_trace_analysis import analyze_workflow_trace
@@ -74,8 +79,8 @@ async def health() -> dict:
     ld = logs_dir()
     co = caseone_dir()
     inc_root = incidents_root()
-    ren_dirs = sorted(
-        [p.name for p in ld.iterdir() if p.is_dir() and p.name.upper().startswith("REN")],
+    log_mount_dirs = sorted(
+        [p.name for p in ld.iterdir() if p.is_dir()],
         key=str.lower,
     )[:10]
     incident_dirs = sorted(
@@ -93,12 +98,13 @@ async def health() -> dict:
             "temp_dir_exists": td.is_dir(),
             "logs_dir": str(ld),
             "logs_dir_exists": ld.is_dir(),
-            "ren_log_dirs": ren_dirs,
+            "log_mount_dirs": log_mount_dirs,
             "caseone_dir": str(co),
             "caseone_exists": co.is_dir(),
             "incidents_root": str(inc_root),
             "recent_incidents": incident_dirs,
         },
+        "confluence": confluence_config_summary(),
     }
 
 
@@ -179,6 +185,16 @@ def _resolve_request_paths(body: IntentTableRequest) -> IntentTableRequest:
 @app.post("/api/intent-table", response_model=IntentTableResponse)
 async def intent_table(body: IntentTableRequest) -> IntentTableResponse:
     return await build_intent_table(_resolve_request_paths(body))
+
+
+@app.post("/api/scan-artifacts", response_model=ArtifactScanResponse)
+async def scan_artifacts_endpoint(body: ArtifactScanRequest) -> ArtifactScanResponse:
+    return await asyncio.to_thread(scan_artifacts, body)
+
+
+@app.post("/api/confluence-search", response_model=ConfluenceSearchResponse)
+async def confluence_search_endpoint(body: ConfluenceSearchRequest) -> ConfluenceSearchResponse:
+    return await asyncio.to_thread(search_confluence_playbooks, body)
 
 
 @app.post("/api/filter-logs", response_model=FilterLogsResponse)

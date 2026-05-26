@@ -1,0 +1,406 @@
+<mxfile host="Electron" agent="tsrag-poc" version="2" pages="2">
+  <diagram id="pipeline-full" name="Пайплайн 0–11 — полная последовательность">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="4200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t1" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=15;" value="tsrag-poc v2: от запроса «Обработать инцидент» до ответа (шаги 0–11)" vertex="1">
+          <mxGeometry x="200" y="15" width="1200" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="t1sub" parent="1" style="text;html=1;strokeColor=none;fillColor=#f5f5f5;align=center;fontSize=11;" value="Предусловие: шаг 0 выполнен — есть intent_table (дата, окно, keywords, anchors, log_search_patterns)" vertex="1">
+          <mxGeometry x="250" y="48" width="1100" height="24" as="geometry" />
+        </mxCell>
+        <!-- Participants -->
+        <mxCell id="p-user" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" value="Пользователь" vertex="1">
+          <mxGeometry x="30" y="90" width="40" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="p-ui" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Web UI" vertex="1">
+          <mxGeometry x="120" y="100" width="80" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="p-api" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="FastAPI&#xa;app.py" vertex="1">
+          <mxGeometry x="240" y="100" width="90" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="p-pipe" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1" value="pipeline.py&#xa;run_incident_pipeline" vertex="1">
+          <mxGeometry x="370" y="95" width="120" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="p-logs" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Анализ логов&#xa;filter, artifact_scan,&#xa;symptoms, slow, errors,&#xa;workflow, client" vertex="1">
+          <mxGeometry x="530" y="85" width="130" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="p-fs" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Артефакты&#xa;*.log" vertex="1">
+          <mxGeometry x="700" y="100" width="80" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="p-csearch" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="confluence_search&#xa;+ playbook_gate" vertex="1">
+          <mxGeometry x="820" y="100" width="120" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="p-wiki" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Confluence" vertex="1">
+          <mxGeometry x="980" y="100" width="90" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="p-co" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="caseone&#xa;index" vertex="1">
+          <mxGeometry x="1110" y="100" width="80" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="p-llm" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Ollama" vertex="1">
+          <mxGeometry x="1230" y="100" width="80" height="45" as="geometry" />
+        </mxCell>
+        <!-- Lifelines -->
+        <mxCell id="ll-user" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;" vertex="1">
+          <mxGeometry x="45" y="180" width="10" height="3800" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-ui" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;" vertex="1">
+          <mxGeometry x="155" y="180" width="10" height="3800" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-api" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;" vertex="1">
+          <mxGeometry x="280" y="180" width="10" height="3800" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-pipe" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;" vertex="1">
+          <mxGeometry x="425" y="180" width="10" height="3800" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-logs" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;" vertex="1">
+          <mxGeometry x="590" y="180" width="10" height="3800" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-fs" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;" vertex="1">
+          <mxGeometry x="735" y="180" width="10" height="3800" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-csearch" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;" vertex="1">
+          <mxGeometry x="875" y="180" width="10" height="3800" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-wiki" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;" vertex="1">
+          <mxGeometry x="1020" y="180" width="10" height="3800" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-co" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;" vertex="1">
+          <mxGeometry x="1145" y="180" width="10" height="3800" as="geometry" />
+        </mxCell>
+        <mxCell id="ll-llm" parent="1" style="html=1;points=[];perimeter=orthogonalPerimeter;outlineConnect=0;targetShapes=umlLifeline;" vertex="1">
+          <mxGeometry x="1265" y="180" width="10" height="3800" as="geometry" />
+        </mxCell>
+        <!-- Request -->
+        <mxCell id="m01" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="«Обработать инцидент»">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="50" y="220" as="sourcePoint" />
+            <mxPoint x="160" y="220" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m02" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="POST /api/incident/process&#xa;{ intent_table, logs_path, caseone_path }">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="160" y="270" as="sourcePoint" />
+            <mxPoint x="285" y="270" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m03" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="resolve_host_path(logs_path, caseone_path)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="290" y="310" as="sourcePoint" />
+            <mxPoint x="290" y="340" as="targetPoint" />
+            <Array as="points"><mxPoint x="350" y="310" /><mxPoint x="350" y="340" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m04" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="run_incident_pipeline(PipelineRequest)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="290" y="380" as="sourcePoint" />
+            <mxPoint x="430" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="frame-sync" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;width=140;height=30;fillColor=#f5f5f5;strokeColor=#666666;" value="run_pipeline_sync (шаги 1–10)" vertex="1">
+          <mxGeometry x="400" y="410" width="520" height="1680" as="geometry" />
+        </mxCell>
+        <!-- Step 1 -->
+        <mxCell id="m10" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="【1】 filter_logs()">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="450" as="sourcePoint" />
+            <mxPoint x="595" y="450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m10fs" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="чтение *.log, срез narrow + slow wide&#xa;→ time_window_lines, slow_time_window_lines">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="595" y="500" as="sourcePoint" />
+            <mxPoint x="740" y="500" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <!-- Step 2 -->
+        <mxCell id="m20" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="【2】 scan_artifacts() — построчно по диску">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="560" as="sourcePoint" />
+            <mxPoint x="595" y="560" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m20fs" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="keywords + anchors (narrow/wide), discovered_anchors">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="595" y="600" as="sourcePoint" />
+            <mxPoint x="740" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m20r" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="ArtifactScanResult">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="595" y="640" as="sourcePoint" />
+            <mxPoint x="430" y="640" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <!-- Step 2b enrich -->
+        <mxCell id="m2b" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;fillColor=#dae8fc;" value="【2b】 Обогащение запроса для Confluence&#xa;anchors_for_search = intent.anchors ∪ discovered_anchors&#xa;+ symptoms + investigation_goal (+ keywords)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="435" y="690" as="sourcePoint" />
+            <mxPoint x="435" y="750" as="targetPoint" />
+            <Array as="points"><mxPoint x="500" y="690" /><mxPoint x="500" y="750" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m2br" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="ConfluenceSearchRequest">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="435" y="790" as="sourcePoint" />
+            <mxPoint x="435" y="820" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <!-- Step 3 -->
+        <mxCell id="m30" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="【3】 search_confluence_playbooks()">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="860" as="sourcePoint" />
+            <mxPoint x="880" y="860" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m30api" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="CQL (siteSearch + anchors), get_page_by_id">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="880" y="900" as="sourcePoint" />
+            <mxPoint x="1025" y="900" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m30skip" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontColor=#666666;" value="[alt] CONFLUENCE_URL пуст → skipped">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="880" y="940" as="sourcePoint" />
+            <mxPoint x="430" y="940" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m30r" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="ConfluenceSearchResult (top_page, body)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="880" y="980" as="sourcePoint" />
+            <mxPoint x="430" y="980" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <!-- Step 4 -->
+        <mxCell id="m40" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="【4】 evaluate_playbook_gate()&#xa;(anchor_hits из шага 2 + страница Confluence)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="1040" as="sourcePoint" />
+            <mxPoint x="880" y="1040" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m40r" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="use_playbook: true | false">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="880" y="1080" as="sourcePoint" />
+            <mxPoint x="430" y="1080" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <!-- Alt playbook -->
+        <mxCell id="alt-pb" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;width=120;height=30;fillColor=#d5e8d4;strokeColor=#82b366;" value="[alt] use_playbook = true" vertex="1">
+          <mxGeometry x="400" y="1120" width="400" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="m51" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="【11】 build_playbook_conclusion()&#xa;текст страницы + цитаты из логов">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="1160" as="sourcePoint" />
+            <mxPoint x="430" y="1200" as="targetPoint" />
+            <Array as="points"><mxPoint x="520" y="1160" /><mxPoint x="520" y="1200" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m52" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontColor=#666666;" value="шаги 5–10: skipped">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="1240" as="sourcePoint" />
+            <mxPoint x="595" y="1240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m53" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;" value="conclusion_source = confluence">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="1280" as="sourcePoint" />
+            <mxPoint x="160" y="1280" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <!-- Alt full -->
+        <mxCell id="alt-full" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;width=120;height=30;fillColor=#f5f5f5;strokeColor=#666666;" value="[else] полный разбор" vertex="1">
+          <mxGeometry x="400" y="1440" width="880" height="920" as="geometry" />
+        </mxCell>
+        <mxCell id="m60" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="【5】 search_symptoms() — keywords в срезе">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="1480" as="sourcePoint" />
+            <mxPoint x="595" y="1480" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m60alt" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontColor=#666666;" value="[alt] нет search_keywords → skipped">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="595" y="1510" as="sourcePoint" />
+            <mxPoint x="430" y="1510" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m61" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="【6】 find_slow_requests() — slow_time_window_lines">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="1550" as="sourcePoint" />
+            <mxPoint x="595" y="1550" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m62" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="【7】 correlate_errors() ±90s к slow">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="1600" as="sourcePoint" />
+            <mxPoint x="595" y="1600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m63" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="【8】 analyze_workflow_trace()">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="1650" as="sourcePoint" />
+            <mxPoint x="595" y="1650" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m64" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="【9】 analyze_client_logs()">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="1700" as="sourcePoint" />
+            <mxPoint x="595" y="1700" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m65" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="【10】 index_caseone_config()">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="1750" as="sourcePoint" />
+            <mxPoint x="1150" y="1750" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m65alt" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;fontColor=#666666;" value="[alt] caseone_path пуст → skipped">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1150" y="1780" as="sourcePoint" />
+            <mxPoint x="430" y="1780" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m66" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="【11】 build_incident_conclusion()">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="1840" as="sourcePoint" />
+            <mxPoint x="430" y="1880" as="targetPoint" />
+            <Array as="points"><mxPoint x="500" y="1840" /><mxPoint x="500" y="1880" /></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m67" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="evidence_bundle (JSON) + enrich_conclusion_request">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="1920" as="sourcePoint" />
+            <mxPoint x="1270" y="1920" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m68" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="chat_json(incident_conclusion_system.md)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="1980" as="sourcePoint" />
+            <mxPoint x="1270" y="1980" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m68r" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="conclusion_source = llm">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1270" y="2020" as="sourcePoint" />
+            <mxPoint x="430" y="2020" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <!-- Response -->
+        <mxCell id="m90" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="PipelineResponse (sync)">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="430" y="2120" as="sourcePoint" />
+            <mxPoint x="290" y="2120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m91" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="slim_filter_for_client() — убрать time_window_lines">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="290" y="2180" as="sourcePoint" />
+            <mxPoint x="430" y="2180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m92" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="PipelineResponse: steps[], filter_summary, artifact_scan,&#xa;confluence_search, playbook_gate, use_playbook, conclusion">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="290" y="2260" as="sourcePoint" />
+            <mxPoint x="160" y="2260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="m93" edge="1" parent="1" style="html=1;verticalAlign=bottom;endArrow=open;dashed=1;edgeStyle=elbowEdgeStyle;elbow=vertical;" value="журнал шагов 1–11 + заключение">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="160" y="2340" as="sourcePoint" />
+            <mxPoint x="50" y="2340" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <!-- Legend note -->
+        <mxCell id="note-leg" parent="1" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;spacingLeft=8;" value="Окна времени:&#xa;• narrow — жалоба (time_window_start–end)&#xa;• wide — ± POC_SLOW_WINDOW_PADDING_H для scan/slow/errors&#xa;&#xa;Шаг 0 (отдельно): диалог → build_intent_table (Ollama) → intent_table&#xa;API: POST /api/incident/dialog/*, POST /api/intent-table" vertex="1">
+          <mxGeometry x="40" y="2480" width="380" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="note-step0" parent="1" style="shape=note;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;spacingLeft=8;" value="См. также лист «Обзор архитектуры» и legacy docs/tsrag-poc-sequence.drawio (шаг 0 детально)" vertex="1">
+          <mxGeometry x="450" y="2480" width="320" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="architecture-overview" name="Обзор архитектуры">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="ov2-title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontStyle=1;fontSize=16;" value="tsrag-poc v2 — обзор архитектуры" vertex="1">
+          <mxGeometry x="400" y="25" width="500" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="ov2-user" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;" value="Пользователь" vertex="1">
+          <mxGeometry x="80" y="100" width="40" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ov2-ui" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="static/index.html&#xa;Диалог, таблица намерений,&#xa;«Обработать инцидент»" vertex="1">
+          <mxGeometry x="180" y="110" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="ov2-api" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="FastAPI app.py&#xa;/api/incident/process&#xa;/api/scan-artifacts&#xa;/api/confluence-search" vertex="1">
+          <mxGeometry x="420" y="100" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ov2-intent" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Шаг 0&#xa;extractor + dialog_service&#xa;IntentTable" vertex="1">
+          <mxGeometry x="180" y="240" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ov2-pipe" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1" value="pipeline.py&#xa;шаги 1–11" vertex="1">
+          <mxGeometry x="420" y="230" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ov2-logs" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="incident_intent/&#xa;log_filter, artifact_scan,&#xa;symptom_search, slow_requests,&#xa;error_correlation, workflow, client" vertex="1">
+          <mxGeometry x="680" y="90" width="220" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ov2-wiki-mod" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="confluence_client&#xa;confluence_search&#xa;playbook_gate&#xa;render_playbook" vertex="1">
+          <mxGeometry x="680" y="220" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ov2-fs" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#f8cecc;strokeColor=#b85450;" value="Артефакты&#xa;temp/incidents&#xa;logs/REN-*" vertex="1">
+          <mxGeometry x="940" y="100" width="120" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ov2-wiki" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Confluence&#xa;(atlassian-python-api)" vertex="1">
+          <mxGeometry x="940" y="230" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ov2-ollama" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Ollama&#xa;шаг 0, шаг 11 (LLM)" vertex="1">
+          <mxGeometry x="420" y="340" width="140" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ov2-co" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=12;fillColor=#f8cecc;strokeColor=#b85450;" value="caseone&#xa;/caseone mount" vertex="1">
+          <mxGeometry x="600" y="330" width="110" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e-u-ui" edge="1" parent="1" style="endArrow=block;html=1;" value="HTTP">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="120" y="140" as="sourcePoint" /><mxPoint x="180" y="140" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-ui-api" edge="1" parent="1" style="endArrow=block;html=1;" value="REST">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="360" y="145" as="sourcePoint" /><mxPoint x="420" y="145" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-api-intent" edge="1" parent="1" style="endArrow=block;html=1;dashed=1;" value="шаг 0">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="450" y="200" as="sourcePoint" /><mxPoint x="280" y="240" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-api-pipe" edge="1" parent="1" style="endArrow=block;html=1;" value="process">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="520" y="200" as="sourcePoint" /><mxPoint x="520" y="230" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-pipe-logs" edge="1" parent="1" style="endArrow=block;html=1;" value="1–2, 5–9">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="620" y="255" as="sourcePoint" /><mxPoint x="680" y="140" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-pipe-wiki" edge="1" parent="1" style="endArrow=block;html=1;" value="3–4, 11a">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="620" y="265" as="sourcePoint" /><mxPoint x="680" y="260" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-logs-fs" edge="1" parent="1" style="endArrow=block;html=1;" value="read">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="900" y="140" as="sourcePoint" /><mxPoint x="940" y="140" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-wmod-wiki" edge="1" parent="1" style="endArrow=block;html=1;" value="CQL/REST">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="860" y="260" as="sourcePoint" /><mxPoint x="940" y="260" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-pipe-llm" edge="1" parent="1" style="endArrow=block;html=1;dashed=1;" value="11b LLM">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="490" y="280" as="sourcePoint" /><mxPoint x="490" y="340" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-pipe-co" edge="1" parent="1" style="endArrow=block;html=1;dashed=1;" value="10">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="580" y="280" as="sourcePoint" /><mxPoint x="655" y="330" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-intent-llm" edge="1" parent="1" style="endArrow=block;html=1;dashed=1;" value="LLM">
+          <mxGeometry relative="1" as="geometry"><mxPoint x="260" y="300" as="sourcePoint" /><mxPoint x="420" y="360" as="targetPoint" /></mxGeometry>
+        </mxCell>
+        <mxCell id="ov2-flow" parent="1" style="text;html=1;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;" value="Поток обработки (шаги 1–11):&#xa;1 filter → 2 artifact_scan → 2b обогащение запроса →&#xa;3 confluence → 4 gate →&#xa;  • playbook: 11 из Confluence (5–10 skip)&#xa;  • иначе: 5 symptoms → 6 slow → 7 errors → 8 workflow → 9 client → 10 caseone → 11 LLM&#xa;&#xa;Конфиг: env/docker.env (OLLAMA_*, CONFLUENCE_*)&#xa;План: incident_intent/plan/wiki_confluence_anchors_plan.md" vertex="1">
+          <mxGeometry x="80" y="440" width="520" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="ov2-modules" parent="1" style="text;html=1;strokeColor=#666666;fillColor=#f5f5f5;align=left;verticalAlign=top;spacingLeft=10;spacingTop=8;fontSize=11;" value="Ключевые модули:&#xa;• artifact_scan — keywords/якоря, narrow+wide, discovered_anchors&#xa;• confluence_search — запрос после обогащения, не только intent&#xa;• playbook_gate — LOG_ANCHOR_MIN, score, пересечение якорей&#xa;• evidence_bundle — досье для LLM (вкл. artifact_scan, confluence)" vertex="1">
+          <mxGeometry x="640" y="440" width="440" height="110" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

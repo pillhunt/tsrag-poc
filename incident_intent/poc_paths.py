@@ -23,7 +23,7 @@ def temp_dir() -> Path:
 
 
 def logs_dir() -> Path:
-    """Каталог логов REN-*: ./logs на хосте, /app/logs в Docker."""
+    """Каталог ручных выгрузок логов: ./logs на хосте, /app/logs в Docker."""
     raw = os.getenv("POC_LOGS_MOUNT", "").strip()
     if raw:
         path = Path(raw)

@@ -41,9 +41,13 @@ def test_pipeline_on_temp_logs():
             logs_path=str(root),
         )
         resp = run_pipeline_sync(req)
-        assert len(resp.steps) == 7
-        assert resp.steps[0].step_number == 1
-        assert resp.steps[0].title.startswith("Шаг 1.")
+        assert len(resp.steps) == 10
+        assert resp.steps[0].step_id == "filter"
+        assert resp.steps[1].step_id == "artifact_scan"
+        assert resp.artifact_scan is not None
+        assert resp.confluence_search is not None
+        assert resp.playbook_gate is not None
+        assert resp.use_playbook is False
         assert resp.filter is not None
         assert resp.filter_summary is not None
         assert resp.filter_summary.time_window_line_count >= 1

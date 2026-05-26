@@ -13,6 +13,8 @@ from incident_intent.error_correlation_models import CorrelateErrorsResponse
 from incident_intent.log_filter_models import TimeWindowLine
 from incident_intent.models import IntentTable
 from incident_intent.slow_requests_models import SlowRequestsResponse
+from incident_intent.artifact_scan_models import ArtifactScanResponse
+from incident_intent.confluence_models import ConfluenceSearchResponse
 from incident_intent.symptom_search_models import SymptomSearchResponse
 
 
@@ -50,16 +52,22 @@ class IncidentConclusionRequest(BaseModel):
     workflow_trace: WorkflowTraceAnalysisResponse | None = None
     client_logs: ClientLogAnalysisResponse | None = None
     caseone_config: CaseoneConfigIndexResponse | None = None
+    artifact_scan: ArtifactScanResponse | None = None
+    confluence_search: ConfluenceSearchResponse | None = None
     max_evidence_samples: int = Field(default=20, ge=0, le=50)
 
 
 class IncidentConclusionResponse(BaseModel):
     status: Literal["ok", "error"]
     conclusion_markdown: str = ""
+    conclusion_source: Literal["llm", "confluence"] = "llm"
     confidence: Literal["high", "medium", "low"] = "medium"
     confidence_reason: str = ""
     supported_by: list[str] = Field(default_factory=list)
     not_proven: list[str] = Field(default_factory=list)
     recommended_actions: list[str] = Field(default_factory=list)
+    confluence_page_id: str | None = None
+    confluence_title: str | None = None
+    confluence_url: str | None = None
     raw_llm: dict | None = None
     errors: list[str] = Field(default_factory=list)

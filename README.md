@@ -1,217 +1,126 @@
 # PoC: разбор инцидента CaseOne
 
-Веб-интерфейс (`static/index.html`) и API для пошагового разбора инцидента: диалог с уточнениями, таблица намерений (Ollama), срез логов, поиск симптомов, долгие запросы, ошибки, workflow/client, конфиг caseone, итоговое заключение LLM.
+Веб-интерфейс (`static/index.html`) и API для пошагового разбора инцидента: диалог с уточнениями, таблица намерений (Ollama), скан артефактов, поиск playbook в **Confluence**, срез логов, долгие запросы, ошибки, workflow/client, конфиг caseone, итог (playbook или LLM).
+
+**План реализации (Confluence + якоря):** [incident_intent/plan/wiki_confluence_anchors_plan.md](incident_intent/plan/wiki_confluence_anchors_plan.md)
+
+**Диаграммы последовательности:**
+
+- **[docs/tsrag-poc-sequence-v2.drawio](docs/tsrag-poc-sequence-v2.drawio)** — актуально: полный пайплайн на одной странице + обзор архитектуры
+- [docs/tsrag-poc-sequence.drawio](docs/tsrag-poc-sequence.drawio) — предыдущая версия (шаг 0, фрагменты)
 
 ## Пайплайн
 
 | Шаг | ID | Содержание |
 |-----|-----|------------|
-| **0** | `intent` | Таблица намерений: дата/время, симптомы, `search_keywords`, `log_search_patterns` (Ollama + парсинг диалога). Дата — **только из текста пользователя**, не из пути к логам. |
-| **1** | `filter` | Проверка путей к логам и caseone, рекурсивный список `*.log`, срез по времени → `time_window_lines`. |
-| **2** | `symptoms` | Поиск `search_keywords` **только в срезе** (шаг 1). |
-| **3** | `slow` | Долгие HTTP/access-запросы в строках среза. |
-| **4** | `errors` | Ошибки во всех файлах среза + корреляция с шагом 3. |
-| **5** | `workflow_trace` | Анализ `WorkflowTrace.log` (если есть в срезе). |
-| **6** | `client_logs` | События клиентских логов в срезе. |
-| **7** | `caseone_config` | Индекс json/conf из `caseone_path` (если задан). |
-| **8** | `conclusion` | Итоговое заключение LLM по досье. |
+| **0** | `intent` | Таблица намерений: дата/время, симптомы, `search_keywords`, **`anchors`**, `log_search_patterns` (Ollama). |
+| **1** | `filter` | Проверка путей, список `*.log`, срез по времени → `time_window_lines` / `slow_time_window_lines`. |
+| **2** | `artifact_scan` | **Скан артефактов на диске:** keywords и якоря в **узком** и **широком** окне; `discovered_anchors` из логов. |
+| **3** | `confluence` | Поиск статьи-playbook в Confluence (CQL, `atlassian-python-api`). |
+| **4** | `playbook_gate` | Решение: playbook или полный разбор (подтверждение якорями в логах). |
+| **5** | `symptoms` | Поиск `search_keywords` в срезе (если не playbook). |
+| **6** | `slow` | Долгие HTTP/access-запросы. |
+| **7** | `errors` | Ошибки в срезе + корреляция с шагом 6. |
+| **8** | `workflow_trace` | `WorkflowTrace.log`. |
+| **9** | `client_logs` | Клиентские логи. |
+| **10** | `caseone_config` | Индекс json/conf из `caseone_path`. |
+| **11** | `conclusion` | **Playbook** (текст Confluence + цитаты логов) **или** заключение LLM. |
 
-В UI одна кнопка **«Обработать инцидент»** вызывает `POST /api/incident/process` (шаги 1–8 подряд, журнал внизу страницы). Отдельные endpoint'ы ниже сохранены для отладки.
+В UI кнопка **«Обработать инцидент»** → `POST /api/incident/process` (шаги 1–11, журнал внизу).
 
-HITL (Human-in-the-loop) не реализован.
+Порядок важен: **сначала скан логов (шаг 2), затем обогащение запроса (2b), затем Confluence (шаг 3)** — `anchors_for_search = intent.anchors ∪ discovered_anchors` из логов + symptoms + goal; не только текст жалобы.
+
+HITL не реализован.
+
+### Два временных окна (шаг 2)
+
+| Окно | Границы | Назначение |
+|------|---------|------------|
+| **Узкое** | `time_window_start`–`end` из таблицы намерений | Жалоба пользователя |
+| **Широкое** | ± `POC_SLOW_WINDOW_PADDING_H` (по умолчанию 1 ч) | Долгие операции и хвосты до/после окна |
 
 ### Алгоритм шага 0
 
-1. **Ollama** извлекает из описания дату, окно времени, симптомы, ключевые слова, паттерны времени, недостающие поля и уточняющие вопросы.
-2. **Диалог:** при необходимости дата и время дополняются из реплик пользователя (без LLM).
-3. **Статус:** `complete` или `needs_clarification`.
+1. **Ollama** извлекает дату, окно, симптомы, `search_keywords`, **`anchors`**, паттерны времени.
+2. **Диалог** дополняет дату/время из реплик пользователя.
+3. Статус: `complete` или `needs_clarification`.
 
 ## Быстрый старт (Docker)
 
-Ollama и PoC поднимаются **одним** `docker-compose.yml`. Модель скачивается сервисом `ollama-init` (том `ollama_data`).
+1. `copy env\docker.env.example env\docker.env` — задайте `CASEONE_HOST_DIR`, при необходимости **Confluence** (`CONFLUENCE_*`).
+2. `docker network create shared-network`
+3. При необходимости — каталоги с логами в `./logs/` (любые имена)
+4. `.\compose.ps1 up --build` → http://localhost:8090 (`TSRAG_PORT`)
 
-1. Скопируйте переменные: `copy env\docker.env.example env\docker.env` и при необходимости отредактируйте `CASEONE_HOST_DIR`.
-2. Создайте сеть (один раз): `docker network create shared-network`
-3. Положите папки логов `REN-*` в каталог **`logs/`** в корне репозитория.
-4. Из корня проекта:
+## Confluence (Wiki)
 
-```powershell
-cd D:\Work\AI\tsrag-poc
-.\compose.ps1 up --build
-```
+Клиент: **[atlassian-python-api](https://atlassian-python-api.readthedocs.io/en/latest/confluence.html)** (`pip install atlassian-python-api`).
 
-Linux/macOS: `./compose.sh up --build`
+| Переменная | Назначение |
+|------------|------------|
+| `CONFLUENCE_URL` | Базовый URL; пусто → шаг 3 **skipped** |
+| `CONFLUENCE_CLOUD` | `true` — Cloud (API token), `false` — Server/DC |
+| `CONFLUENCE_USERNAME` | Логин / email |
+| `CONFLUENCE_TOKEN` | API token (Cloud) или пароль (Server) |
+| `CONFLUENCE_PAT` | Personal Access Token (Server/DC, вместо пароля) |
+| `CONFLUENCE_SPACE_KEY` | Ограничить space |
+| `CONFLUENCE_CQL_PREFIX` | Напр. `label = "incident-playbook"` |
+| `CONFLUENCE_SCORE_MIN` | Порог score для playbook (по умолчанию 4) |
+| `LOG_ANCHOR_MIN` | Мин. якорей из статьи, найденных в логах (по умолчанию 2) |
 
-Альтернатива: `docker compose --env-file env/docker.env up --build`
+Проверка: `GET /api/health` → блок `confluence`.
 
-Откройте http://localhost:8090 (порт на хосте — **`TSRAG_PORT`** в `env/docker.env`, по умолчанию `8090`).
+Рекомендация для авторов статей: label `incident-playbook` и блок **«Якоря:»** со списком API/SQL-меток.
 
-**Конфликт имён:** если контейнер `ollama` уже запущен другим проектом, остановите его (`docker rm -f ollama`) или переименуйте `container_name` в compose.
-
-## Запуск локально (Ollama на хосте)
-
-```powershell
-cd D:\Work\AI\tsrag-poc
-pip install -r requirements.txt
-$env:OLLAMA_BASE_URL = "http://127.0.0.1:11434"
-$env:OLLAMA_MODEL = "llama3.1:8b-instruct-q4_K_M"
-python -m uvicorn app:app --host 0.0.0.0 --port 8090
-```
-
-Логи для ручного пути: `logs/REN-…` или загрузка zip в диалог → `temp/incidents/<id>/`. Caseone локально: `temp/caseone` (создаётся автоматически).
-
-## Пути и тома (Docker)
-
-| Хост (корень проекта) | В контейнере | Назначение |
-|------------------------|--------------|------------|
-| `./temp` | `/app/temp` | Загрузки инцидентов, `temp/incidents/<id>`, локальный `temp/caseone` |
-| `./logs` | `/app/logs` | Папки `REN-*` для ручного `logs_path` |
-| `CASEONE_HOST_DIR` из `env/docker.env` | `/caseone` | Код/конфиги caseone (только чтение) |
-
-**Логи в форме (Docker):** `/app/logs/REN-MSKCASPRO01_2026-04-23` или оставьте путь из диалога (`temp/incidents/<id>` после загрузки архива).
-
-**Caseone в форме (Docker):** только `/caseone` или `/caseone/…` (не Windows-пути).
-
-**Локально:** `logs/…`, `temp/incidents/<id>`, `temp/caseone`.
-
-Проверка после старта: `GET /api/health` — `logs_dir`, список `ren_log_dirs`, `caseone_exists`, настройки Ollama.
-
-Приоритетные файлы в отчётах помечены ★: `RequestLoggingMiddleware.log`, `global.log`, `WorkflowTrace.log`.
-
-## Диалог (основной сценарий UI)
+## API (отладка)
 
 | Метод | Путь |
 |-------|------|
-| `POST` | `/api/incident/dialog/start` — новый инцидент, опционально файлы |
-| `POST` | `/api/incident/dialog/{id}/message` — сообщение / уточнение |
-| `POST` | `/api/incident/dialog/{id}/artifacts` — дозагрузка zip/логов |
-| `GET` | `/api/incident/dialog/{id}` — состояние диалога |
+| `POST` | `/api/scan-artifacts` — шаг 2 без полного пайплайна |
+| `POST` | `/api/confluence-search` — шаг 3 |
+| `POST` | `/api/filter-logs` — шаг 1 |
+| `POST` | `/api/symptom-search` | `/api/slow-requests` | `/api/correlate-errors` |
+| `POST` | `/api/incident/process` — шаги 1–11 |
 
-После шага 0: `POST /api/incident/process` с `intent_table`, `logs_path`, `caseone_path`.
-
-## API (отладка и интеграции)
-
-### `POST /api/intent-table`
-
-```json
-{
-  "incident_description": "15.05 с 14:00 до 15:30 отчёт долго формировался, в конце таймаут",
-  "logs_path": "/app/logs/REN-MSKCASPRO01_2026-05-15",
-  "caseone_path": "/caseone"
-}
-```
-
-### `POST /api/filter-logs` (шаг 1)
-
-Рекурсивный список `*.log` + срез по `log_search_patterns`.
-
-```json
-{
-  "logs_path": "/app/logs/REN-MSKCASPRO01_2026-05-15",
-  "log_search_patterns": ["2026-05-15 14:", "2026-05-15 15:"],
-  "caseone_path": "/caseone",
-  "recursive": true,
-  "max_depth": null
-}
-```
-
-- `recursive: true` (по умолчанию) — все подкаталоги.
-- `max_depth: 0` — только корень `logs_path`; `null` — без ограничения.
-- Можно передать путь к одному файлу `.log`.
-- Пропускаются служебные каталоги: `.git`, `node_modules`, `bin`, `obj` и т.п.
-
-### `POST /api/symptom-search` (шаг 2) и `POST /api/slow-requests` (шаг 3)
-
-Обязательно передать **`time_window_lines`** из ответа `filter-logs`.
-
-```json
-{
-  "logs_path": "/app/logs/REN-MSKCASPRO01_2026-05-15",
-  "log_search_patterns": ["2026-05-15 14:"],
-  "time_window_lines": [
-    { "file": "case1.renins.com/global.log", "line_number": 42, "text": "…" }
-  ],
-  "search_keywords": ["отчёт", "Timeout", "/api/reports"]
-}
-```
-
-Шаг 3 (slow): дополнительно `min_duration_ms`, `top_n`, `http_access_only`.
-
-### `POST /api/correlate-errors` (шаг 4)
-
-```json
-{
-  "logs_path": "/app/logs/REN-MSKCASPRO01_2026-05-15",
-  "log_search_patterns": ["2026-05-15 14:"],
-  "time_window_lines": [],
-  "slow_requests": [],
-  "correlation_window_sec": 90,
-  "global_log_only": false
-}
-```
-
-Категории ошибок: `incident_intent/error_rules.yaml`.
-
-### `POST /api/incident/process` (шаги 1–8)
+### `POST /api/incident/process`
 
 ```json
 {
   "intent_table": {},
-  "logs_path": "/app/logs/REN-MSKCASPRO01_2026-05-15",
-  "caseone_path": "/caseone",
-  "incident_id": "optional-uuid",
-  "max_evidence_samples": 20
+  "logs_path": "/app/logs/host_2026-05-15",
+  "caseone_path": "/caseone"
 }
 ```
 
-Ответ: `steps[]`, `filter_summary`, результаты шагов, `conclusion` (`conclusion_markdown`, `confidence`, …). Тяжёлый срез строк в JSON не дублируется — только `filter_summary`.
-
-Также: `/api/analyze-workflow-trace`, `/api/analyze-client-logs`, `/api/index-caseone-config`, `/api/incident-conclusion`.
+Ответ: `steps[]`, `artifact_scan`, `confluence_search`, `playbook_gate`, `use_playbook`, `conclusion` (`conclusion_source`: `confluence` | `llm`), `filter_summary`.
 
 ## Переменные окружения
 
-### Docker (`env/docker.env`)
+Шаблон: `env/docker.env.example` (Ollama + Confluence + лимиты скана).
 
-| Переменная | Назначение |
-|------------|------------|
-| `TSRAG_PORT` | Порт PoC на хосте (в контейнере всегда `8090`) |
-| `CASEONE_HOST_DIR` | Папка caseone на хосте → mount в `/caseone` |
-| `OLLAMA_BASE_URL` | URL Ollama для PoC (`http://ollama:11434` в compose) |
-| `OLLAMA_PORT` | Проброс Ollama на хост |
-| `OLLAMA_LISTEN` | Bind внутри контейнера ollama |
-| `OLLAMA_MODEL` | Модель для `ollama-init pull` и запросов PoC |
-| `OLLAMA_TIMEOUT_SEC` | Таймаут HTTP к Ollama |
-| `OLLAMA_NUM_CTX` | Размер контекста (`num_ctx`) |
-| `CUDA_VISIBLE_DEVICES`, `NVIDIA_VISIBLE_DEVICES` | GPU для сервиса ollama (опционально) |
+### Локально
 
-Логи: каталог `logs/` в проекте, mount задаётся в `docker-compose.yml` (`./logs` → `/app/logs`). Отдельная переменная не нужна.
-
-Шаблон: `env/docker.env.example`.
-
-### Локально (без compose)
-
-| Переменная | По умолчанию |
-|------------|----------------|
-| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` |
-| `OLLAMA_MODEL` | `llama3.1:8b-instruct-q4_K_M` (~6 GiB RAM; `q6_K` — ≥10 GiB) |
-| `OLLAMA_TIMEOUT_SEC` | `1200` |
-| `OLLAMA_NUM_CTX` | `8192` (при большом RAM можно `32768`) |
-| `PORT` | `8090` (uvicorn) |
-| `POC_TEMP_DIR` | `<корень проекта>/temp` |
-| `POC_LOGS_MOUNT` | в Docker задаётся compose: `/app/logs` |
-
-Опционально: `POC_PATH_MAP` — доп. правила `host=mount;…` для `resolve_host_path`; `POC_CASEONE_MAX_FILE_BYTES`, `POC_CASEONE_MAX_CONFIG_FILES` — лимиты индекса caseone.
+```powershell
+pip install -r requirements.txt
+$env:OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+python -m uvicorn app:app --host 0.0.0.0 --port 8090
+```
 
 ## Структура проекта
 
 ```
 tsrag-poc/
-  app.py                 # FastAPI
-  compose.ps1 / compose.sh
-  docker-compose.yml
+  app.py
+  incident_intent/
+    artifact_scan.py      # шаг 2
+    confluence_client.py  # env, atlassian API
+    confluence_search.py  # шаг 3
+    playbook_gate.py      # шаг 4
+    render_playbook.py    # шаг 11 (playbook)
+    pipeline.py
+    plan/wiki_confluence_anchors_plan.md
+  docs/tsrag-poc-sequence-v2.drawio
+  docs/tsrag-poc-sequence.drawio
   env/docker.env.example
-  incident_intent/       # шаги пайплайна, LLM, парсеры
-  logs/                  # REN-* для Docker mount
-  static/index.html      # UI
-  temp/                  # инциденты и загрузки
+  static/index.html
 ```

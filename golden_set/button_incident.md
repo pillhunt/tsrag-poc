@@ -1,6 +1,6 @@
 ## **Заключение по инциденту 23.04.2026, ~20:00–22:30**
 
-По логам `REN-MSKCASPRO01_2026-04-23` и коду CaseOne (`RequestLoggingMiddleware` в `caseone`) картина такая.
+По логам инцидента (выгрузка за 2026-04-23) и коду CaseOne (`RequestLoggingMiddleware` в `caseone`) картина такая.
 
 ### **Что именно «сохранялось»**
 

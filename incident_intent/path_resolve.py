@@ -93,29 +93,23 @@ def path_hints_for_missing(logs_path: str) -> list[str]:
 
     if is_docker_runtime():
         hints.append(
-            f"Docker: положите папки REN-* в ./logs на хосте "
-            f"и укажите путь {logs_mount}/<папка> (или загрузите логи в инцидент)."
+            f"Docker: положите каталоги с логами в ./logs на хосте "
+            f"и укажите путь {logs_mount}/<каталог> (или загрузите логи в диалоге)."
         )
 
-    ren_dirs = list_mount_entries(logs_mount, prefix="REN")
-    if ren_dirs:
-        hints.append(f"В {logs_mount} доступны: " + ", ".join(ren_dirs))
+    mount_dirs = list_mount_entries(logs_mount)
+    if mount_dirs:
+        hints.append(f"В {logs_mount} доступны: " + ", ".join(mount_dirs))
+        hints.append(f"Пример: {logs_mount}/{mount_dirs[0]}")
     elif Path(logs_mount).is_dir():
         hints.append(
-            f"В {logs_mount} нет папок REN-* — добавьте их в каталог logs/ проекта."
+            f"В {logs_mount} нет подкаталогов — добавьте выгрузку логов в logs/ проекта "
+            "или используйте загрузку в инцидент (temp/incidents/<id>/)."
         )
     else:
         hints.append(
             f"Каталог логов {logs_mount} недоступен — проверьте том ./logs в docker-compose."
         )
-
-    if "ren-mskcaspro01" in _norm_key(logs_path) and ren_dirs:
-        exact = [n for n in ren_dirs if n.upper() == "REN-MSKCASPRO01"]
-        dated = [n for n in ren_dirs if n.upper().startswith("REN-MSKCASPRO01_")]
-        if exact:
-            hints.append(f"Найдена папка: {logs_mount}/{exact[0]}")
-        elif dated:
-            hints.append(f"Возможно, нужна папка с датой: {logs_mount}/{dated[0]}")
 
     if not Path(CASEONE_CONTAINER_PATH).exists():
         hints.append(
